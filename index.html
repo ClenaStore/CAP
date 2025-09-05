@@ -1,26 +1,72 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Painel de Aprovação • F360 Finanças</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {font-family: Arial, sans-serif; background:#f9fafb; margin:0; padding:0;}
-    header {background:#2563eb; color:#fff; padding:1rem; text-align:center;}
-    table {width:100%; border-collapse:collapse; margin:1rem 0;}
-    th, td {padding:0.8rem; border:1px solid #ddd;}
-    th {background:#f3f4f6;}
-    button {padding:0.4rem 0.8rem; border:none; border-radius:6px; cursor:pointer;}
-    .ok{background:#16a34a; color:#fff;}
-    .no{background:#ef4444; color:#fff;}
+    :root{
+      --bg:#f5f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --line:#e5e7eb;
+      --brand:#2563eb; --ok:#16a34a; --no:#ef4444; --warn:#b45309; --radius:14px; --shadow:0 12px 28px rgba(2,6,23,.08);
+    }
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial;background:var(--bg);color:var(--text)}
+    header{background:var(--brand);color:#fff;padding:18px 16px;text-align:center}
+    header h1{margin:0;font-size:20px}
+    main{max-width:1200px;margin:18px auto;padding:0 12px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .hidden{display:none}
+    .login{max-width:420px;margin:48px auto}
+    input,select,textarea{border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;background:#fff;width:100%}
+    button{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:600}
+    .btn{background:#111827;color:#fff}
+    .btn-primary{background:var(--brand);color:#fff}
+    .btn-ok{background:var(--ok);color:#fff}
+    .btn-no{background:var(--no);color:#fff}
+    .btn-outline{background:#fff;border:1px solid var(--line);color:#111827}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}
+    th{font-size:12px;text-transform:uppercase;color:var(--muted);letter-spacing:.3px}
+    .chip{display:inline-block;background:#eef2ff;color:#3730a3;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid #e5e7eb}
+    .actions{display:flex;gap:8px}
+    .topbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .muted{color:var(--muted);font-size:12px}
+    .loader{border:3px solid #e5e7eb;border-top:3px solid var(--brand);border-radius:50%;width:18px;height:18px;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
-  <header>
-    <h1>Aprovação de Parcelas – F360</h1>
-  </header>
-  <main>
-    <table id="parcelas">
+<header>
+  <h1>Aprovação de Parcelas – F360</h1>
+</header>
+
+<main>
+  <!-- Login -->
+  <section id="login" class="card login">
+    <h3>Acesso do Aprovador</h3>
+    <p class="muted">Digite a senha de aprovação para carregar os títulos em aberto.</p>
+    <div class="row">
+      <input id="pwd" type="password" placeholder="Senha (ADMIN_SECRET)" autocomplete="current-password" />
+      <button class="btn-primary" onclick="entrar()">Entrar</button>
+    </div>
+    <p id="loginMsg" class="muted"></p>
+  </section>
+
+  <!-- Painel -->
+  <section id="painel" class="card hidden">
+    <div class="topbar">
+      <div class="row">
+        <button class="btn-outline" onclick="carregarParcelas()">↻ Atualizar</button>
+        <span id="count" class="chip">0 itens</span>
+      </div>
+      <div class="row">
+        <input id="q" placeholder="Pesquisar por fornecedor, histórico ou empresa…" oninput="render()" />
+      </div>
+    </div>
+
+    <div class="muted">Somente títulos em aberto são listados. Aprove/negue abaixo.</div>
+
+    <table>
       <thead>
         <tr>
           <th>Empresa</th>
@@ -28,45 +74,91 @@
           <th>Vencimento</th>
           <th>Meio de Pagamento</th>
           <th>Histórico</th>
+          <th>Valor</th>
           <th>Ações</th>
         </tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="tbody">
+        <tr><td colspan="7"><div class="row"><div class="loader"></div><span>Carregando…</span></div></td></tr>
+      </tbody>
     </table>
-  </main>
-  <script>
-    async function carregarParcelas(){
-      let res = await fetch("/api/f360");
-      let dados = await res.json();
-      let tbody = document.querySelector("#parcelas tbody");
-      tbody.innerHTML = "";
-      dados.forEach(p => {
-        let tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${p.empresa}</td>
-          <td>${p.fornecedor}</td>
-          <td>${p.vencimento}</td>
-          <td>${p.meioPagamento}</td>
-          <td>${p.historico}</td>
-          <td>
-            <button class="ok" onclick="acao('${p.id}','aprovar')">Aprovar</button>
-            <button class="no" onclick="acao('${p.id}','negar')">Negar</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
+  </section>
+</main>
 
-    async function acao(id, status){
-      await fetch("/api/approve",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({id, status})
-      });
+<script>
+  let SECRET = "";
+  let DATA = [];
+
+  function show(id, on){ document.getElementById(id).classList.toggle('hidden', !on); }
+
+  async function entrar(){
+    const pwd = document.getElementById('pwd').value.trim();
+    document.getElementById('loginMsg').textContent = "Validando…";
+    const ok = await validar(pwd);
+    if(ok){
+      SECRET = pwd;
+      show('login', false);
+      show('painel', true);
       carregarParcelas();
+    }else{
+      document.getElementById('loginMsg').textContent = "Senha incorreta.";
     }
+  }
 
-    carregarParcelas();
-  </script>
+  async function validar(secret){
+    const r = await fetch('/api/f360?ping=1', { headers: { 'x-admin-secret': secret } });
+    return r.status === 200;
+  }
+
+  async function carregarParcelas(){
+    const r = await fetch('/api/f360', { headers: { 'x-admin-secret': SECRET } });
+    if(!r.ok){
+      document.getElementById('tbody').innerHTML =
+        `<tr><td colspan="7">Erro ao carregar (${r.status}).</td></tr>`;
+      return;
+    }
+    DATA = await r.json();
+    render();
+  }
+
+  function render(){
+    const term = (document.getElementById('q').value || '').toLowerCase();
+    const rows = DATA.filter(p => {
+      const s = `${p.empresa} ${p.fornecedor} ${p.historico}`.toLowerCase();
+      return s.includes(term);
+    }).map(p => `
+      <tr>
+        <td>${esc(p.empresa)}</td>
+        <td>${esc(p.fornecedor)}</td>
+        <td>${esc(p.vencimento)}</td>
+        <td>${esc(p.meioPagamento || '-')}</td>
+        <td>${esc(p.historico || '-')}</td>
+        <td>${fmtMoeda(p.valor)}</td>
+        <td class="actions">
+          <button class="btn-ok" onclick="acao('${p.id}','aprovar')">Aprovar</button>
+          <button class="btn-no" onclick="acao('${p.id}','negar')">Negar</button>
+        </td>
+      </tr>
+    `).join('');
+
+    document.getElementById('tbody').innerHTML = rows || `<tr><td colspan="7">Nada encontrado.</td></tr>`;
+    document.getElementById('count').textContent = `${DATA.length} itens`;
+  }
+
+  async function acao(id, status){
+    const motivo = status === 'negar' ? prompt('Descreva o motivo da negativa/contestação (opcional):', '') : '';
+    const body = { id, status, motivo };
+    const r = await fetch('/api/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': SECRET },
+      body: JSON.stringify(body)
+    });
+    if(!r.ok){ alert('Falha ao enviar ação: ' + r.status); return; }
+    await carregarParcelas();
+  }
+
+  function esc(s){ return (s ?? '').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+  function fmtMoeda(v){ if(v==null||isNaN(v)) return '-'; return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+</script>
 </body>
 </html>
