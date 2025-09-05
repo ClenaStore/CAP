@@ -1,42 +1,36 @@
 // /api/approve.js
-export const config = { runtime: 'nodejs' };
+// aprova uma parcela no F360 (tenta múltiplas rotas públicas conhecidas)
+
+import { loginF360, f360Fetch } from "./_f360-helper.js";
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
-  if (req.headers['x-admin-secret'] !== process.env.ADMIN_SECRET) {
-    return res.status(401).json({ error: 'unauthorized' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "method_not_allowed" });
   }
 
-  const { id, status, motivo } = req.body || {};
-  if (!id || !status) return res.status(400).json({ error: 'id e status são obrigatórios' });
-  if (!['aprovar', 'negar'].includes(status)) {
-    return res.status(400).json({ error: 'status inválido (use aprovar|negar)' });
-  }
+  try {
+    const { id, motivo } = await req.json?.() ?? await (async () => {
+      try { return await req.clone().json(); } catch { return {}; }
+    })();
+    if (!id) return res.status(400).json({ error: "missing_id" });
 
-  const base = (process.env.F360_BASE_URL || '').replace(/\/+$/, '');
-  const headers = {
-    'Authorization': `Bearer ${process.env.F360_API_KEY}`,
-    'x-api-key': process.env.F360_API_KEY,
-    'Accept': 'application/json',
-    'Content-Type': 'application/json'
-  };
+    const token = await loginF360();
 
-  const tries = [
-    { method: 'POST', url: `${base}/${encodeURIComponent(id)}/status`, body: { status, motivo: motivo || '' } },
-    { method: 'POST', url: `${base}/${encodeURIComponent(id)}/acao`,   body: { acao: status, motivo: motivo || '' } },
-    { method: 'POST', url: `${base}/atualizar`,                         body: { id, status, motivo: motivo || '' } }
-  ];
+    // candidatos de rota (ajuste aqui se você souber a rota exata da sua conta)
+    const tries = [
+      { path: "ParcelasDeTituloPublicAPI/Aprovar", body: { ParcelaId: id, Motivo: motivo || "" } },
+      { path: "TitulosPublicAPI/AprovarParcela", body: { ParcelaId: id, Motivo: motivo || "" } },
+      { path: "ParcelasPublicAPI/Aprovar", body: { ParcelaId: id, Motivo: motivo || "" } },
+    ];
 
-  const errors = [];
-  for (const t of tries) {
-    try {
-      const r = await fetch(t.url, { method: t.method, headers, body: JSON.stringify(t.body) });
-      const txt = await r.text();
-      if (!r.ok) { errors.push({ try: t, status: r.status, body: txt.slice(0, 400) }); continue; }
-      return res.status(200).json({ ok: true, raw: txt });
-    } catch (e) {
-      errors.push({ try: t, error: String(e).slice(0, 400) });
+    for (const t of tries) {
+      const r = await f360Fetch(t.path, { method: "POST", token, body: t.body });
+      if (r.ok) return res.status(200).json({ ok: true, path: t.path, result: r.json ?? r.text });
+      if (r.status === 401) return res.status(401).json({ error: "token_invalido_ou_expirado" });
     }
+
+    return res.status(502).json({ error: "approve_paths_exhausted", tries });
+  } catch (e) {
+    return res.status(500).json({ error: "approve_error", detail: String(e) });
   }
-  return res.status(502).json({ error: 'Falha ao enviar ação ao F360', tries: errors });
 }
