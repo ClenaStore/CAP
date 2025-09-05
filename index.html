@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Títulos em Aberto – F360</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f8fafc; margin: 0; }
+    header { background: #2563eb; color: #fff; padding: 16px; font-size: 20px; font-weight: bold; text-align: center; }
+    main { padding: 20px; }
+    .filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    select, input { padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; }
+    button { background: #2563eb; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #1e40af; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
+    th { background: #f1f5f9; }
+    .erro { color: red; white-space: pre-wrap; font-size: 14px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <header>Títulos em Aberto – F360</header>
+  <main>
+    <div class="filtros">
+      <label>Tipo:
+        <select id="tipo">
+          <option>Ambos</option>
+          <option>Despesa</option>
+          <option>Receita</option>
+        </select>
+      </label>
+      <label>Tipo de Datas:
+        <select id="tipoDatas">
+          <option>Vencimento</option>
+          <option>Emissão</option>
+          <option>Competência</option>
+          <option>Liquidação</option>
+        </select>
+      </label>
+      <label>Status:
+        <select id="status">
+          <option>Aberto</option>
+          <option>Todos</option>
+          <option>Liquidado</option>
+        </select>
+      </label>
+      <label>Início:
+        <input type="date" id="inicio">
+      </label>
+      <label>Fim:
+        <input type="date" id="fim">
+      </label>
+      <button onclick="carregar()">Aplicar filtros</button>
+      <button onclick="ultimos31()">Últimos 31 dias</button>
+    </div>
+
+    <div id="erro" class="erro"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          <th>Fornecedor</th>
+          <th>Vencimento</th>
+          <th>Meio de Pagamento</th>
+          <th>Histórico</th>
+          <th>Valor</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tabela"></tbody>
+    </table>
+  </main>
+
+  <script src="f360.js"></script>
+</body>
+</html>
