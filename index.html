@@ -1,61 +1,121 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Títulos em Aberto – F360</title>
+  <meta charset="UTF-8">
+  <title>Aprovação de Parcelas – F360</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial, sans-serif; background: #f8fafc; margin: 0; }
-    header { background: #2563eb; color: #fff; padding: 16px; font-size: 20px; font-weight: bold; text-align: center; }
-    main { padding: 20px; }
-    .filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-    select, input { padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; }
-    button { background: #2563eb; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
-    button:hover { background: #1e40af; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
-    th { background: #f1f5f9; }
-    .erro { color: red; white-space: pre-wrap; font-size: 14px; margin-top: 12px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f8fafc;
+    }
+    header {
+      background: #2563eb;
+      color: #fff;
+      padding: 12px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    .container {
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+    .filtros {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+      align-items: center;
+    }
+    .filtros label {
+      font-size: 14px;
+      margin-right: 5px;
+    }
+    .filtros select, .filtros input {
+      padding: 6px;
+      font-size: 14px;
+    }
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 4px;
+      background: #2563eb;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #1e40af;
+    }
+    #statusMsg {
+      margin: 10px 0;
+      font-size: 14px;
+      color: red;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 10px;
+      font-size: 14px;
+      text-align: left;
+    }
+    th {
+      background: #f1f5f9;
+    }
   </style>
 </head>
 <body>
-  <header>Títulos em Aberto – F360</header>
-  <main>
+  <header>Aprovação de Parcelas – F360</header>
+
+  <div class="container">
     <div class="filtros">
-      <label>Tipo:
-        <select id="tipo">
-          <option>Ambos</option>
-          <option>Despesa</option>
-          <option>Receita</option>
-        </select>
-      </label>
-      <label>Tipo de Datas:
-        <select id="tipoDatas">
-          <option>Vencimento</option>
-          <option>Emissão</option>
-          <option>Competência</option>
-          <option>Liquidação</option>
-        </select>
-      </label>
-      <label>Status:
-        <select id="status">
-          <option>Aberto</option>
-          <option>Todos</option>
-          <option>Liquidado</option>
-        </select>
-      </label>
-      <label>Início:
-        <input type="date" id="inicio">
-      </label>
-      <label>Fim:
-        <input type="date" id="fim">
-      </label>
-      <button onclick="carregar()">Aplicar filtros</button>
+      <label>Tipo:</label>
+      <select id="tipo">
+        <option value="Ambos">Ambos</option>
+        <option value="Despesa">Despesa</option>
+        <option value="Receita">Receita</option>
+      </select>
+
+      <label>Tipo de Datas:</label>
+      <select id="tipoDatas">
+        <option value="Vencimento">Vencimento</option>
+        <option value="Emissao">Emissão</option>
+        <option value="Competencia">Competência</option>
+        <option value="Liquidacao">Liquidação</option>
+      </select>
+
+      <label>Status:</label>
+      <select id="status">
+        <option value="Aberto">Aberto</option>
+        <option value="Todos">Todos</option>
+        <option value="Liquidado">Liquidado</option>
+        <option value="PendentesDeAprovacao">Pendentes de Aprovação</option>
+      </select>
+
+      <label>Início:</label>
+      <input type="date" id="inicio">
+
+      <label>Fim:</label>
+      <input type="date" id="fim">
+
+      <button onclick="aplicarFiltros()">Aplicar filtros</button>
       <button onclick="ultimos31()">Últimos 31 dias</button>
+
+      <input type="text" id="busca" placeholder="Pesquisar por fornecedor, histórico ou empresa…" style="flex:1; padding:6px;">
     </div>
 
-    <div id="erro" class="erro"></div>
-    <table>
+    <div id="statusMsg"></div>
+
+    <table id="tabela">
       <thead>
         <tr>
           <th>Empresa</th>
@@ -67,10 +127,88 @@
           <th>Status</th>
         </tr>
       </thead>
-      <tbody id="tabela"></tbody>
+      <tbody></tbody>
     </table>
-  </main>
+  </div>
 
-  <script src="f360.js"></script>
+  <script>
+    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbymUOg9TlZHSDeI4D-hJeNNMtp-fV350Iu-9o95eIjaJSJoohthU1M8ype8AN_HIGsp/exec"; // URL do seu WebApp do Apps Script
+
+    async function carregarParcelas(params = {}) {
+      document.getElementById("statusMsg").innerText = "Carregando...";
+
+      const url = new URL(WEBAPP_URL);
+      Object.keys(params).forEach(k => url.searchParams.append(k, params[k]));
+
+      try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        if (!data || !data.Result || !data.Result.Parcelas) {
+          document.getElementById("statusMsg").innerText = "Nenhum resultado ou erro na API.";
+          return;
+        }
+
+        document.getElementById("statusMsg").innerText = "";
+        const tbody = document.querySelector("#tabela tbody");
+        tbody.innerHTML = "";
+
+        data.Result.Parcelas.forEach(p => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${p.DadosDoTitulo?.Empresa?.Inscricao || ""}</td>
+            <td>${p.DadosDoTitulo?.ClienteFornecedor?.Nome || ""}</td>
+            <td>${p.Vencimento || ""}</td>
+            <td>${p.MeioDePagamento || ""}</td>
+            <td>${p.DadosDoTitulo?.Observacao || ""}</td>
+            <td>${p.ValorBruto?.toLocaleString("pt-BR", {style:"currency", currency:"BRL"})}</td>
+            <td>${p.Status || ""}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+      } catch (err) {
+        console.error(err);
+        document.getElementById("statusMsg").innerText = "Erro: " + err;
+      }
+    }
+
+    function aplicarFiltros() {
+      const tipo = document.getElementById("tipo").value;
+      const tipoDatas = document.getElementById("tipoDatas").value;
+      const status = document.getElementById("status").value;
+      const inicio = document.getElementById("inicio").value;
+      const fim = document.getElementById("fim").value;
+
+      if (!inicio || !fim) {
+        alert("Selecione datas de início e fim!");
+        return;
+      }
+
+      carregarParcelas({ tipo, tipoDatas, status, inicio, fim });
+    }
+
+    function ultimos31() {
+      const hoje = new Date();
+      const fim = hoje.toISOString().split("T")[0];
+      const inicio = new Date(hoje.setDate(hoje.getDate() - 31)).toISOString().split("T")[0];
+
+      document.getElementById("inicio").value = inicio;
+      document.getElementById("fim").value = fim;
+
+      aplicarFiltros();
+    }
+
+    // Carregar automaticamente últimos 31 dias ao abrir
+    window.onload = ultimos31;
+
+    // Busca dinâmica
+    document.getElementById("busca").addEventListener("input", function() {
+      const termo = this.value.toLowerCase();
+      document.querySelectorAll("#tabela tbody tr").forEach(tr => {
+        tr.style.display = tr.innerText.toLowerCase().includes(termo) ? "" : "none";
+      });
+    });
+  </script>
 </body>
 </html>
