@@ -1,5 +1,5 @@
 // /api/f360.js
-// Consulta parcelas do F360 fazendo login automático com usuário e senha
+// Consulta parcelas do F360 fazendo login automático
 // Runtime Node.js na Vercel
 
 const parseMaybeJson = (t) => { try { return JSON.parse(t); } catch { return null; } };
@@ -59,7 +59,12 @@ async function getToken() {
 export const config = { runtime: "nodejs" };
 
 export default async function handler(req, res) {
-  // Autenticação do painel
+  // 🔹 Primeiro: debug mostra a senha configurada no servidor
+  if (req.query.debug === "secret") {
+    return res.status(200).send(process.env.ADMIN_SECRET || "não definido");
+  }
+
+  // 🔹 Depois: valida a senha recebida no header
   if (req.headers["x-admin-secret"] !== process.env.ADMIN_SECRET) {
     return res.status(401).json({ error: "unauthorized" });
   }
