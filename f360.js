@@ -1,6 +1,6 @@
 // ⚠️ Coloque seu usuário e senha do F360 aqui
-const EMAIL = "SEU_EMAIL@F360.COM";
-const SENHA = "SUA_SENHA";
+const EMAIL = "souzanalbert58@gmail.com";
+const SENHA = "@Central176";
 
 async function getToken() {
   const res = await fetch("https://financas.f360.com.br/PublicAPI/Account/Login", {
