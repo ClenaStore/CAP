@@ -1,22 +1,17 @@
 // /api/f360-login.js
 export default async function handler(req, res) {
   try {
-    const base = process.env.F360_BASE_URL || "https://financas.f360.com.br";
-    const url = `${base}/Account/LoginPublicAPI`;
-
-    const body = JSON.stringify({
-      Email: process.env.F360_USER,
-      Senha: process.env.F360_PASS,
-    });
-
-    const r = await fetch(url, {
+    const r = await fetch("https://financas.f360.com.br/Account/LoginPublicAPI", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body,
+      body: JSON.stringify({
+        Email: process.env.F360_USER,
+        Senha: process.env.F360_PASS
+      })
     });
 
-    const text = await r.text();
-    res.status(r.status).send(text);
+    const json = await r.json();
+    res.status(r.status).json(json);
   } catch (e) {
     res.status(500).json({ error: String(e) });
   }
