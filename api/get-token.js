@@ -1,12 +1,7 @@
+
 // get-token.js
-// Gera o token_jwt do F360
-// Rode: node get-token.js
-
-import fetch from "node-fetch";
-
 const EMAIL = "souzanalbert58@gmail.com";
 const SENHA = "@Central176";
-
 async function gerarToken() {
   const url = "https://financas.f360.com.br/Account/LoginPublicAPI";
   const body = JSON.stringify({ Email: EMAIL, Senha: SENHA });
