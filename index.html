@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Aprovação de Parcelas – F360</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; margin:0; background:#f9fbfd; }
+    header { background:#2563eb; color:#fff; padding:20px; text-align:center; font-size:20px; font-weight:bold; }
+    main { padding:20px; }
+    table { width:100%; border-collapse: collapse; margin-top:20px; background:#fff; }
+    th, td { padding:12px; border-bottom:1px solid #ddd; text-align:left; }
+    th { background:#f1f5f9; }
+    button { background:#2563eb; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+    button:hover { background:#1e40af; }
+    #erro { color:red; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <header>Aprovação de Parcelas – F360</header>
+  <main>
+    <button onclick="carregar()">↻ Atualizar</button>
+    <span id="contador">0 itens</span>
+    <input type="text" id="filtro" placeholder="Pesquisar por fornecedor, histórico ou empresa…" oninput="filtrar()" style="float:right;padding:6px;width:280px">
+    <table id="tabela">
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          <th>Fornecedor</th>
+          <th>Vencimento</th>
+          <th>Meio de Pagamento</th>
+          <th>Histórico</th>
+          <th>Valor</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div id="erro"></div>
+  </main>
+
+  <script>
+    let dados = [];
+
+    async function carregar() {
+      document.querySelector("#erro").textContent = "";
+      const tbody = document.querySelector("#tabela tbody");
+      tbody.innerHTML = "<tr><td colspan=7>Carregando...</td></tr>";
+
+      try {
+        const r = await fetch("/api/f360");
+        if (!r.ok) throw new Error("Erro API: " + r.status);
+        const json = await r.json();
+        dados = json.Parcelas || [];
+        render();
+      } catch (e) {
+        tbody.innerHTML = "<tr><td colspan=7>Erro ao consultar API: " + e + "</td></tr>";
+      }
+    }
+
+    function render() {
+      const tbody = document.querySelector("#tabela tbody");
+      tbody.innerHTML = "";
+      dados.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.Empresa?.Nome || ""}</td>
+          <td>${p.Fornecedor?.Nome || ""}</td>
+          <td>${p.Vencimento || ""}</td>
+          <td>${p.MeioPagamento || ""}</td>
+          <td>${p.Historico || ""}</td>
+          <td>${p.Valor || ""}</td>
+          <td>
+            <button onclick="aprovar('${p.Id}')">Aprovar</button>
+            <button onclick="negar('${p.Id}')">Negar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.querySelector("#contador").textContent = dados.length + " itens";
+    }
+
+    function filtrar() {
+      const termo = document.querySelector("#filtro").value.toLowerCase();
+      const filtrados = dados.filter(p =>
+        (p.Fornecedor?.Nome || "").toLowerCase().includes(termo) ||
+        (p.Empresa?.Nome || "").toLowerCase().includes(termo) ||
+        (p.Historico || "").toLowerCase().includes(termo)
+      );
+      const tbody = document.querySelector("#tabela tbody");
+      tbody.innerHTML = "";
+      filtrados.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.Empresa?.Nome || ""}</td>
+          <td>${p.Fornecedor?.Nome || ""}</td>
+          <td>${p.Vencimento || ""}</td>
+          <td>${p.MeioPagamento || ""}</td>
+          <td>${p.Historico || ""}</td>
+          <td>${p.Valor || ""}</td>
+          <td>
+            <button onclick="aprovar('${p.Id}')">Aprovar</button>
+            <button onclick="negar('${p.Id}')">Negar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.querySelector("#contador").textContent = filtrados.length + " itens";
+    }
+
+    async function aprovar(id) {
+      alert("Aprovar parcela " + id);
+    }
+
+    async function negar(id) {
+      alert("Negar parcela " + id);
+    }
+
+    carregar();
+  </script>
+</body>
+</html>
