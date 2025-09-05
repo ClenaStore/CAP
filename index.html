@@ -2,181 +2,113 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Aprovação de Parcelas – F360</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{
-      --bg:#f5f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --line:#e5e7eb;
-      --brand:#2563eb; --ok:#16a34a; --no:#ef4444; --warn:#b45309;
-      --radius:14px; --shadow:0 12px 28px rgba(2,6,23,.08);
+    body {
+      margin:0; padding:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:#f7f9fc;
+      color:#1e293b;
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial;background:var(--bg);color:var(--text)}
-    header{background:var(--brand);color:#fff;padding:18px;text-align:center}
-    header h1{margin:0;font-size:20px}
-    main{max-width:1200px;margin:18px auto;padding:0 12px}
-    .card{background:var(--card);border:1px solid var(--line);
-      border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}
-    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    .hidden{display:none}
-    .login{max-width:420px;margin:48px auto}
-    input,select,textarea{border:1px solid var(--line);border-radius:10px;
-      padding:10px 12px;font:inherit;background:#fff;width:100%}
-    button{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:600}
-    .btn{background:#111827;color:#fff}
-    .btn-primary{background:var(--brand);color:#fff}
-    .btn-ok{background:var(--ok);color:#fff}
-    .btn-no{background:var(--no);color:#fff}
-    .btn-outline{background:#fff;border:1px solid var(--line);color:#111827}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}
-    th{font-size:12px;text-transform:uppercase;color:var(--muted);letter-spacing:.3px}
-    .chip{display:inline-block;background:#eef2ff;color:#3730a3;
-      padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid #e5e7eb}
-    .actions{display:flex;gap:8px}
-    .topbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .muted{color:var(--muted);font-size:12px}
-    .loader{border:3px solid #e5e7eb;border-top:3px solid var(--brand);
-      border-radius:50%;width:18px;height:18px;animation:spin 1s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
+    header {
+      background:#2563eb;
+      color:white;
+      padding:20px;
+      text-align:center;
+      font-size:20px;
+      font-weight:bold;
+    }
+    main {
+      padding:30px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      min-height:80vh;
+    }
+    .card {
+      background:white;
+      padding:30px;
+      border-radius:12px;
+      box-shadow:0 8px 20px rgba(0,0,0,0.08);
+      width:100%;
+      max-width:420px;
+      text-align:center;
+    }
+    input {
+      width:100%;
+      padding:12px;
+      margin:12px 0;
+      border:1px solid #d1d5db;
+      border-radius:8px;
+      font-size:16px;
+    }
+    button {
+      background:#2563eb;
+      color:white;
+      border:none;
+      padding:12px 20px;
+      border-radius:8px;
+      cursor:pointer;
+      font-size:16px;
+      font-weight:600;
+    }
+    button:hover { background:#1d4ed8; }
+    #login-error {
+      color:red;
+      font-size:14px;
+      display:none;
+    }
+    #debug-secret {
+      color:blue;
+      font-size:12px;
+      margin-top:10px;
+      display:none;
+    }
   </style>
 </head>
 <body>
-<header>
-  <h1>Aprovação de Parcelas – F360</h1>
-</header>
-
-<main>
-  <!-- Login -->
-  <section id="login" class="card login">
-    <h3>Acesso do Aprovador</h3>
-    <p class="muted">Digite a senha de aprovação para carregar os títulos em aberto.</p>
-    <div class="row">
-      <input id="pwd" type="password" placeholder="Senha (ADMIN_SECRET)" autocomplete="current-password" />
-      <button class="btn-primary" onclick="entrar()">Entrar</button>
+  <header>Aprovação de Parcelas – F360</header>
+  <main>
+    <div class="card">
+      <h2>Acesso do Aprovador</h2>
+      <p>Digite a senha de aprovação para carregar os títulos em aberto.</p>
+      <input type="password" id="senha" placeholder="Senha de aprovação"/>
+      <button id="entrar">Entrar</button>
+      <p id="login-error">Senha incorreta.</p>
+      <p id="debug-secret"></p>
     </div>
-    <p id="loginMsg" class="muted"></p>
-  </section>
+  </main>
 
-  <!-- Painel -->
-  <section id="painel" class="card hidden">
-    <div class="topbar">
-      <div class="row">
-        <button class="btn-outline" onclick="carregarParcelas()">↻ Atualizar</button>
-        <span id="count" class="chip">0 itens</span>
-        <button class="btn-outline" onclick="abrirDebug()">Ver debug</button>
-      </div>
-      <div class="row">
-        <input id="q" placeholder="Pesquisar por fornecedor, histórico ou empresa…" oninput="render()" />
-      </div>
-    </div>
-
-    <div class="muted">Somente títulos em aberto são listados. Aprove/negue abaixo.</div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Empresa</th>
-          <th>Fornecedor</th>
-          <th>Vencimento</th>
-          <th>Meio de Pagamento</th>
-          <th>Histórico</th>
-          <th>Valor</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="tbody">
-        <tr>
-          <td colspan="7">
-            <div class="row">
-              <div class="loader"></div><span>Carregando…</span>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
-</main>
-
-<script>
-  let SECRET = "";
-  let DATA = [];
-
-  function show(id, on){ document.getElementById(id).classList.toggle('hidden', !on); }
-  function esc(s){ return (s ?? '').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
-  function fmtMoeda(v){ if(v==null||isNaN(v)) return '-'; return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-
-  async function entrar(){
-    const pwd = document.getElementById('pwd').value.trim();
-    document.getElementById('loginMsg').textContent = "Validando…";
-    const r = await fetch('/api/f360?ping=1', { headers: { 'x-admin-secret': pwd } });
-    if (r.status === 200) {
-      SECRET = pwd; show('login', false); show('painel', true); carregarParcelas();
-    } else {
-      document.getElementById('loginMsg').textContent = "Senha incorreta.";
+  <script>
+    async function tentarLogin() {
+      const senha = document.getElementById("senha").value.trim();
+      const r = await fetch("/api/f360", {
+        headers: { "x-admin-secret": senha }
+      });
+      if (r.status === 401) {
+        document.getElementById("login-error").style.display = "block";
+        checkDebugSecret(senha); // debug extra
+      } else {
+        window.location.href = "/painel.html?secret=" + encodeURIComponent(senha);
+      }
     }
-  }
 
-  async function carregarParcelas(){
-    const el = document.getElementById('tbody');
-    el.innerHTML = `<tr><td colspan="7"><div class="row"><div class="loader"></div><span>Carregando…</span></div></td></tr>`;
-    const r = await fetch('/api/f360', { headers: { 'x-admin-secret': SECRET } });
-    if (!r.ok) {
-      const text = await r.text();
-      el.innerHTML = `<tr><td colspan="7"><pre style="white-space:pre-wrap;background:#fff3f3;
-        border:1px solid #fca5a5;padding:10px;border-radius:10px;max-height:220px;overflow:auto">
-Erro ao consultar API (${r.status}):
-${esc(text).slice(0, 3000)}
-      </pre></td></tr>`;
-      document.getElementById('count').textContent = `0 itens`;
-      return;
+    async function checkDebugSecret(senha) {
+      try {
+        const r = await fetch("/api/f360?debug=secret", {
+          headers: { "x-admin-secret": senha }
+        });
+        const txt = await r.text();
+        document.getElementById("debug-secret").style.display = "block";
+        document.getElementById("debug-secret").innerText =
+          "DEBUG • ADMIN_SECRET no server: " + txt;
+      } catch (e) {
+        console.error("Erro debug:", e);
+      }
     }
-    DATA = await r.json();
-    render();
-  }
 
-  function render(){
-    const term = (document.getElementById('q').value || '').toLowerCase();
-    const rows = DATA.filter(p => {
-      const s = `${p.empresa} ${p.fornecedor} ${p.historico}`.toLowerCase();
-      return s.includes(term);
-    }).map(p => `
-      <tr>
-        <td>${esc(p.empresa)}</td>
-        <td>${esc(p.fornecedor)}</td>
-        <td>${esc(p.vencimento)}</td>
-        <td>${esc(p.meioPagamento || "-")}</td>
-        <td>${esc(p.historico || "-")}</td>
-        <td>${fmtMoeda(p.valor)}</td>
-        <td class="actions">
-          <button class="btn-ok" onclick="acao('${p.id}','aprovar')">Aprovar</button>
-          <button class="btn-no" onclick="acao('${p.id}','negar')">Negar</button>
-        </td>
-      </tr>
-    `).join('');
-    document.getElementById('tbody').innerHTML = rows || `<tr><td colspan="7">Nada encontrado.</td></tr>`;
-    document.getElementById('count').textContent = `${DATA.length} itens`;
-  }
-
-  async function acao(id, status){
-    const motivo = status === 'negar' ? prompt('Motivo (opcional):', '') : '';
-    const r = await fetch('/api/approve', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-secret': SECRET },
-      body: JSON.stringify({ id, status, motivo })
-    });
-    if (!r.ok) {
-      const t = await r.text();
-      alert(`Falha ao ${status}: ${r.status}\n${t.slice(0, 500)}`);
-      return;
-    }
-    carregarParcelas();
-  }
-
-  function abrirDebug(){
-    const w = window.open('/api/f360?debug=1', '_blank');
-    if(!w) alert('Permita pop-ups para ver o debug.');
-  }
-</script>
+    document.getElementById("entrar").addEventListener("click", tentarLogin);
+  </script>
 </body>
 </html>
