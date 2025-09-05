@@ -1,8 +1,5 @@
 // /api/approve.js
-const tryJson = async (r) => {
-  const txt = await r.text();
-  try { return {json: JSON.parse(txt), raw: txt}; } catch { return {json: null, raw: txt}; }
-};
+export const config = { runtime: 'nodejs' };
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
@@ -24,27 +21,22 @@ export default async function handler(req, res) {
     'Content-Type': 'application/json'
   };
 
-  // Variações comuns de rota/forma de envio:
-  const attempts = [
+  const tries = [
     { method: 'POST', url: `${base}/${encodeURIComponent(id)}/status`, body: { status, motivo: motivo || '' } },
     { method: 'POST', url: `${base}/${encodeURIComponent(id)}/acao`,   body: { acao: status, motivo: motivo || '' } },
-    { method: 'POST', url: `${base}/atualizar`,                         body: { id, status, motivo: motivo || '' } },
+    { method: 'POST', url: `${base}/atualizar`,                         body: { id, status, motivo: motivo || '' } }
   ];
 
   const errors = [];
-  for (const t of attempts) {
+  for (const t of tries) {
     try {
       const r = await fetch(t.url, { method: t.method, headers, body: JSON.stringify(t.body) });
-      const { json, raw } = await tryJson(r);
-      if (!r.ok) {
-        errors.push({ try: t, status: r.status, body: raw.slice(0, 400) });
-        continue;
-      }
-      return res.status(200).json({ ok: true, data: json ?? raw });
+      const txt = await r.text();
+      if (!r.ok) { errors.push({ try: t, status: r.status, body: txt.slice(0, 400) }); continue; }
+      return res.status(200).json({ ok: true, raw: txt });
     } catch (e) {
       errors.push({ try: t, error: String(e).slice(0, 400) });
     }
   }
-
   return res.status(502).json({ error: 'Falha ao enviar ação ao F360', tries: errors });
 }
