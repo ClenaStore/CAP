@@ -1,121 +1,293 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Aprovação de Parcelas – F360</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: Arial, sans-serif; margin:0; background:#f9fbfd; }
-    header { background:#2563eb; color:#fff; padding:20px; text-align:center; font-size:20px; font-weight:bold; }
-    main { padding:20px; }
-    table { width:100%; border-collapse: collapse; margin-top:20px; background:#fff; }
-    th, td { padding:12px; border-bottom:1px solid #ddd; text-align:left; }
-    th { background:#f1f5f9; }
-    button { background:#2563eb; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
-    button:hover { background:#1e40af; }
-    #erro { color:red; margin-top:10px; }
+    :root{
+      --primary:#2563eb;
+      --primary-dark:#1e40af;
+      --bg:#f6f8fb;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e5e7eb;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    header{background:var(--primary);color:#fff;padding:18px 16px;text-align:center;font-weight:700;font-size:20px}
+    main{max-width:1200px;margin:24px auto;padding:0 16px}
+    .card{background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(2,6,23,.06)}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .toolbar{align-items:center;justify-content:space-between;padding:12px 12px;border-bottom:1px solid var(--border)}
+    .filters{padding:12px}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    select,input[type="date"],input[type="text"]{
+      border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:#fff;min-height:40px;font-size:14px
+    }
+    input[type="text"]{width:280px}
+    button{
+      background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer
+    }
+    button.secondary{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+    button:hover{background:var(--primary-dark)}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left;font-size:14px}
+    th{background:#f8fafc;font-weight:700}
+    tr:hover{background:#fafcff}
+    .right{text-align:right}
+    .muted{color:var(--muted)}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid var(--border);background:#f8fafc}
+    .empty{padding:22px;text-align:center;color:var(--muted)}
+    .danger{color:#b91c1c}
+    .hint{font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
   <header>Aprovação de Parcelas – F360</header>
-  <main>
-    <button onclick="carregar()">↻ Atualizar</button>
-    <span id="contador">0 itens</span>
-    <input type="text" id="filtro" placeholder="Pesquisar por fornecedor, histórico ou empresa…" oninput="filtrar()" style="float:right;padding:6px;width:280px">
-    <table id="tabela">
-      <thead>
-        <tr>
-          <th>Empresa</th>
-          <th>Fornecedor</th>
-          <th>Vencimento</th>
-          <th>Meio de Pagamento</th>
-          <th>Histórico</th>
-          <th>Valor</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <div id="erro"></div>
+
+  <main class="card">
+    <!-- Top bar -->
+    <div class="row toolbar">
+      <div class="row" style="gap:8px">
+        <button id="btnRefresh" title="Recarregar">↻ Atualizar</button>
+        <span id="contador" class="muted">0 itens</span>
+      </div>
+      <input id="busca" type="text" placeholder="Pesquisar por fornecedor, histórico ou empresa…" />
+    </div>
+
+    <!-- Filtros obrigatórios -->
+    <div class="filters">
+      <div class="row">
+        <div>
+          <label>Tipo</label>
+          <select id="tipo">
+            <option value="Ambos">Ambos</option>
+            <option value="Despesa">Despesa</option>
+            <option value="Receita">Receita</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Tipo de Datas</label>
+          <select id="tipoDatas">
+            <option value="Vencimento">Vencimento</option>
+            <option value="Emissão">Emissão</option>
+            <option value="Competência">Competência</option>
+            <option value="Liquidação">Liquidação</option>
+            <option value="LiquidacaoSistema">LiquidacaoSistema</option>
+            <option value="Atualização">Atualização</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Status</label>
+          <select id="status">
+            <option value="Aberto">Aberto</option>
+            <option value="AbertoAVencer">AbertoAVencer</option>
+            <option value="AbertoVencidos">AbertoVencidos</option>
+            <option value="Liquidado">Liquidado</option>
+            <option value="Baixado">Baixado</option>
+            <option value="Aprovados">Aprovados</option>
+            <option value="PendentesDeAprovacao">PendentesDeAprovacao</option>
+            <option value="Renegociados">Renegociados</option>
+            <option value="LiquidadoConciliado">LiquidadoConciliado</option>
+            <option value="Agendado">Agendado</option>
+            <option value="AbertoNaoAgendados">AbertoNaoAgendados</option>
+            <option value="NaoVinculadoComDDA">NaoVinculadoComDDA</option>
+            <option value="Liquidado Pendente">Liquidado Pendente</option>
+            <option value="Todos">Todos</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Início</label>
+          <input id="inicio" type="date" />
+        </div>
+        <div>
+          <label>Fim</label>
+          <input id="fim" type="date" />
+        </div>
+
+        <div style="align-self:flex-end">
+          <button id="btnAplicar">Aplicar filtros</button>
+          <button class="secondary" id="btnHoje">Últimos 31 dias</button>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:6px">
+        Os campos <b>Tipo</b>, <b>Tipo de Datas</b>, <b>Início</b> e <b>Fim</b> são obrigatórios conforme a API do F360.
+      </div>
+    </div>
+
+    <!-- Tabela -->
+    <div style="overflow:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Empresa</th>
+            <th>Fornecedor</th>
+            <th>Vencimento</th>
+            <th>Meio de Pagamento</th>
+            <th>Histórico</th>
+            <th class="right">Valor</th>
+            <th>Status</th>
+            <th class="right">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="8" class="empty">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
   </main>
 
   <script>
-    let dados = [];
+    // ===== Utils =====
+    const pad = n => String(n).padStart(2, "0");
+    const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const money = v => (Number(v||0)).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 
+    function setUltimos31Dias() {
+      const fim = new Date();
+      const inicio = new Date();
+      inicio.setDate(fim.getDate() - 31);
+      document.getElementById("inicio").value = fmt(inicio);
+      document.getElementById("fim").value = fmt(fim);
+    }
+
+    // ===== Estado =====
+    let bruto = [];     // payload original (Result.Parcelas)
+    let exibidos = [];  // linhas filtradas por texto
+
+    // ===== Carregar dados da API =====
     async function carregar() {
-      document.querySelector("#erro").textContent = "";
-      const tbody = document.querySelector("#tabela tbody");
-      tbody.innerHTML = "<tr><td colspan=7>Carregando...</td></tr>";
+      const tbody = document.getElementById("tbody");
+      tbody.innerHTML = `<tr><td colspan="8" class="empty">Carregando…</td></tr>`;
+
+      const params = new URLSearchParams({
+        tipo: document.getElementById("tipo").value,
+        tipoDatas: document.getElementById("tipoDatas").value,
+        status: document.getElementById("status").value,
+        inicio: document.getElementById("inicio").value,
+        fim: document.getElementById("fim").value,
+      });
 
       try {
-        const r = await fetch("/api/f360");
-        if (!r.ok) throw new Error("Erro API: " + r.status);
-        const json = await r.json();
-        dados = json.Parcelas || [];
-        render();
-      } catch (e) {
-        tbody.innerHTML = "<tr><td colspan=7>Erro ao consultar API: " + e + "</td></tr>";
+        // A API do servidor deve aceitar esses mesmos parâmetros (req.query)
+        const resp = await fetch(`/api/f360?${params.toString()}`);
+        const text = await resp.text();
+
+        if (!resp.ok) {
+          tbody.innerHTML = `<tr><td colspan="8" class="empty danger">
+            Erro ao consultar API (${resp.status}):<br><pre style="white-space:pre-wrap;text-align:left">${text}</pre>
+          </td></tr>`;
+          document.getElementById("contador").textContent = "0 itens";
+          return;
+        }
+
+        const json = JSON.parse(text);
+        // Formato oficial: { Result: { Parcelas: [...] } }
+        bruto = (json?.Result?.Parcelas) || json?.Parcelas || [];
+        aplicarFiltroTexto();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty danger">Falha ao carregar: ${err}</td></tr>`;
+        document.getElementById("contador").textContent = "0 itens";
       }
     }
 
-    function render() {
-      const tbody = document.querySelector("#tabela tbody");
-      tbody.innerHTML = "";
-      dados.forEach(p => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${p.Empresa?.Nome || ""}</td>
-          <td>${p.Fornecedor?.Nome || ""}</td>
-          <td>${p.Vencimento || ""}</td>
-          <td>${p.MeioPagamento || ""}</td>
-          <td>${p.Historico || ""}</td>
-          <td>${p.Valor || ""}</td>
-          <td>
-            <button onclick="aprovar('${p.Id}')">Aprovar</button>
-            <button onclick="negar('${p.Id}')">Negar</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
+    function aplicarFiltroTexto() {
+      const q = (document.getElementById("busca").value || "").toLowerCase();
+      exibidos = bruto.filter(p => {
+        const empresa = p?.DadosDoTitulo?.Empresa?.Nome || p?.Empresa?.Nome || "";
+        const fornec  = p?.DadosDoTitulo?.ClienteFornecedor?.Nome || "";
+        const hist    = p?.Observacao || p?.Historico || "";
+        return (
+          empresa.toLowerCase().includes(q) ||
+          fornec.toLowerCase().includes(q) ||
+          hist.toLowerCase().includes(q)
+        );
       });
-      document.querySelector("#contador").textContent = dados.length + " itens";
+      renderTabela();
     }
 
-    function filtrar() {
-      const termo = document.querySelector("#filtro").value.toLowerCase();
-      const filtrados = dados.filter(p =>
-        (p.Fornecedor?.Nome || "").toLowerCase().includes(termo) ||
-        (p.Empresa?.Nome || "").toLowerCase().includes(termo) ||
-        (p.Historico || "").toLowerCase().includes(termo)
-      );
-      const tbody = document.querySelector("#tabela tbody");
-      tbody.innerHTML = "";
-      filtrados.forEach(p => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${p.Empresa?.Nome || ""}</td>
-          <td>${p.Fornecedor?.Nome || ""}</td>
-          <td>${p.Vencimento || ""}</td>
-          <td>${p.MeioPagamento || ""}</td>
-          <td>${p.Historico || ""}</td>
-          <td>${p.Valor || ""}</td>
-          <td>
-            <button onclick="aprovar('${p.Id}')">Aprovar</button>
-            <button onclick="negar('${p.Id}')">Negar</button>
-          </td>
+    function renderTabela() {
+      const tbody = document.getElementById("tbody");
+      if (exibidos.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty">Nada encontrado.</td></tr>`;
+        document.getElementById("contador").textContent = "0 itens";
+        return;
+      }
+
+      tbody.innerHTML = exibidos.map(p => {
+        const empresa = p?.DadosDoTitulo?.Empresa?.Nome || p?.Empresa?.Nome || "-";
+        const fornecedor = p?.DadosDoTitulo?.ClienteFornecedor?.Nome || "-";
+        const venc = p?.Vencimento || "";
+        const meio = p?.MeioDePagamento || p?.MeioPagamento || "-";
+        const hist = p?.Observacao || p?.Historico || "";
+        const valor = p?.ValorBruto ?? p?.ValorLiquido ?? 0;
+        const status = p?.Status || "-";
+        const id = p?.ParcelaId || p?._id || p?.Id || "";
+
+        return `
+          <tr>
+            <td>${empresa}</td>
+            <td>${fornecedor}</td>
+            <td>${venc}</td>
+            <td>${meio}</td>
+            <td>${hist}</td>
+            <td class="right">${money(valor)}</td>
+            <td><span class="pill">${status}</span></td>
+            <td class="right">
+              <button onclick="aprovar('${id}')">Aprovar</button>
+              <button class="secondary" onclick="negar('${id}')">Negar</button>
+            </td>
+          </tr>
         `;
-        tbody.appendChild(tr);
-      });
-      document.querySelector("#contador").textContent = filtrados.length + " itens";
+      }).join("");
+
+      document.getElementById("contador").textContent = `${exibidos.length} itens`;
     }
 
-    async function aprovar(id) {
-      alert("Aprovar parcela " + id);
+    // ===== Ações =====
+    async function aprovar(id){
+      if(!id){ alert("ID inválido"); return; }
+      try{
+        const r = await fetch("/api/approve", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({ id })
+        });
+        const t = await r.text();
+        if(!r.ok) throw new Error(t);
+        alert("✔️ Aprovado!");
+        carregar();
+      }catch(e){ alert("Erro ao aprovar: " + e); }
     }
 
-    async function negar(id) {
-      alert("Negar parcela " + id);
+    async function negar(id){
+      if(!id){ alert("ID inválido"); return; }
+      const motivo = prompt("Motivo da negação (opcional):") || "";
+      try{
+        const r = await fetch("/api/deny", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({ id, motivo })
+        });
+        const t = await r.text();
+        if(!r.ok) throw new Error(t);
+        alert("❌ Negado!");
+        carregar();
+      }catch(e){ alert("Erro ao negar: " + e); }
     }
 
+    // ===== Eventos / Inicialização =====
+    document.getElementById("btnRefresh").addEventListener("click", carregar);
+    document.getElementById("btnAplicar").addEventListener("click", carregar);
+    document.getElementById("btnHoje").addEventListener("click", () => { setUltimos31Dias(); carregar(); });
+    document.getElementById("busca").addEventListener("input", aplicarFiltroTexto);
+
+    // defaults
+    setUltimos31Dias();
     carregar();
   </script>
 </body>
