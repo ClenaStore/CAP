@@ -1,49 +1,76 @@
-// /api/f360.js
-import { loginF360, f360Fetch } from "./_f360-helper.js";
+// api/f360.js
+// Endpoint backend para autenticar e buscar parcelas no F360
 
-const pad = (n) => String(n).padStart(2, "0");
-const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+let cachedToken = null;
+let tokenExpiration = null;
+
+async function getToken() {
+  // Se já existe token válido em cache, reutiliza
+  if (cachedToken && tokenExpiration && Date.now() < tokenExpiration) {
+    return cachedToken;
+  }
+
+  const res = await fetch("https://financas.f360.com.br/PublicAPI/Account/Login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      Email: process.env.F360_USER,
+      Senha: process.env.F360_PASS
+    })
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error("Erro login F360: " + res.status + " → " + txt);
+  }
+
+  const data = await res.json();
+  const token = data.Token || data.token || data.jwt;
+
+  if (!token) throw new Error("Token JWT não retornado pelo F360.");
+
+  // Cache do token por 10 minutos
+  cachedToken = token;
+  tokenExpiration = Date.now() + 10 * 60 * 1000;
+  return token;
+}
 
 export default async function handler(req, res) {
   try {
+    const token = await getToken();
+
+    // parâmetros obrigatórios da API do F360
     const {
       tipo = "Ambos",
       tipoDatas = "Vencimento",
       status = "Aberto",
       inicio,
       fim,
-    } = req.query || {};
+      pagina = 1
+    } = req.query;
 
-    // defaults: últimos 31 dias, se não vier do front
-    const end = fim ? new Date(fim) : new Date();
-    const start = inicio ? new Date(inicio) : new Date();
-    if (!inicio) start.setDate(end.getDate() - 31);
-
-    const token = await loginF360();
-
-    // conforme doc, obrigatórios: pagina, tipo, inicio, fim, tipoDatas
-    const basePath = "ParcelasDeTituloPublicAPI/ListarParcelasDeTitulos";
-    const q = new URLSearchParams({
-      pagina: "1",
-      tipo,
-      inicio: fmt(start),
-      fim: fmt(end),
-      tipoDatas,
-    });
-    if (status && status !== "Todos") q.set("status", status);
-
-    const path = `${basePath}?${q.toString()}`;
-    const r = await f360Fetch(path, { token });
-    if (!r.ok) {
-      return res.status(r.status).json({
-        error: "f360_list_failed",
-        status: r.status,
-        path: r.url,
-        body: r.text?.slice(0, 2000),
-      });
+    if (!inicio || !fim) {
+      return res.status(400).json({ error: "Campos obrigatórios: inicio e fim (yyyy-MM-dd)" });
     }
-    return res.status(200).json(r.json || { raw: r.text });
-  } catch (e) {
-    return res.status(502).json({ error: "f360_pull_failed", detail: String(e) });
+
+    const url = `https://financas.f360.com.br/ParcelasDeTituloPublicAPI/ListarParcelasDeTitulos?pagina=${pagina}&tipo=${tipo}&inicio=${inicio}&fim=${fim}&tipoDatas=${tipoDatas}&status=${status}`;
+
+    const r = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await r.json();
+
+    if (!r.ok) {
+      return res.status(r.status).json({ error: "Erro API F360", detail: data });
+    }
+
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("Erro f360.js:", err);
+    res.status(500).json({ error: err.message });
   }
 }
