@@ -1,50 +1,48 @@
 // /api/f360.js
-// Lista "Parcelas de Títulos" conforme a documentação pública do F360.
-// Requer variáveis na Vercel: F360_USER e F360_PASS.
-
 import { loginF360, f360Fetch } from "./_f360-helper.js";
 
-function fmt(d) {
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
+const pad = (n) => String(n).padStart(2, "0");
+const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 
 export default async function handler(req, res) {
   try {
+    const {
+      tipo = "Ambos",
+      tipoDatas = "Vencimento",
+      status = "Aberto",
+      inicio,
+      fim,
+    } = req.query || {};
+
+    // defaults: últimos 31 dias, se não vier do front
+    const end = fim ? new Date(fim) : new Date();
+    const start = inicio ? new Date(inicio) : new Date();
+    if (!inicio) start.setDate(end.getDate() - 31);
+
     const token = await loginF360();
 
-    // período máximo: 31 dias (doc)
-    const fim = new Date();
-    const inicio = new Date();
-    inicio.setDate(fim.getDate() - 31);
-
-    // parâmetros obrigatórios da doc:
-    // tipo (Ambos), inicio, fim, tipoDatas (tentamos Vencimento depois Emissão), pagina=1
+    // conforme doc, obrigatórios: pagina, tipo, inicio, fim, tipoDatas
     const basePath = "ParcelasDeTituloPublicAPI/ListarParcelasDeTitulos";
-    const common = `pagina=1&tipo=Ambos&inicio=${fmt(inicio)}&fim=${fmt(fim)}`;
+    const q = new URLSearchParams({
+      pagina: "1",
+      tipo,
+      inicio: fmt(start),
+      fim: fmt(end),
+      tipoDatas,
+    });
+    if (status && status !== "Todos") q.set("status", status);
 
-    const tries = [
-      `${basePath}?${common}&tipoDatas=Vencimento&status=Aberto`,
-      `${basePath}?${common}&tipoDatas=Emissão&status=Aberto`,
-    ];
-
-    let last = null;
-    for (const path of tries) {
-      const r = await f360Fetch(path, { token });
-      if (r.ok && (r.json?.Result?.Parcelas || r.json?.Parcelas)) {
-        // Devolvemos o payload cru da API para o front (mais fácil mapear)
-        return res.status(200).json(r.json);
-      }
-      last = { pathTried: path, status: r.status, body: r.text };
-      // se 4xx/5xx, tenta a próxima variação
-    }
-
-    return res
-      .status(last?.status || 502)
-      .json({ error: "f360_list_failed", last_try: last, hint:
-        "Verifique se sua conta tem dados no período, se o status 'Aberto' existe e " +
-        "se 'tipoDatas' é aceito como 'Vencimento' ou 'Emissão' na sua instância."
+    const path = `${basePath}?${q.toString()}`;
+    const r = await f360Fetch(path, { token });
+    if (!r.ok) {
+      return res.status(r.status).json({
+        error: "f360_list_failed",
+        status: r.status,
+        path: r.url,
+        body: r.text?.slice(0, 2000),
       });
+    }
+    return res.status(200).json(r.json || { raw: r.text });
   } catch (e) {
     return res.status(502).json({ error: "f360_pull_failed", detail: String(e) });
   }
