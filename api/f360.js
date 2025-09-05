@@ -1,10 +1,8 @@
 // /api/f360.js
-// Estratégia:
-// - Usa base https://financas.f360.com.br
-// - Tenta uma lista de caminhos mais comuns das PublicAPI de "Parcelas de Título"
-// - Permite forçar um caminho via env F360_PATH
-// - Envia Bearer JWT (F360_API_KEY)
-// - Filtros: pagina=1, últimos 31 dias (formato yyyy-MM-dd)
+// Consulta parcelas do F360 fazendo login automático com usuário e senha
+// Runtime Node.js na Vercel
+
+const parseMaybeJson = (t) => { try { return JSON.parse(t); } catch { return null; } };
 
 function fmtDate(d = new Date()) {
   const pad = (n) => String(n).padStart(2, "0");
@@ -16,10 +14,7 @@ function addDays(d, n) {
   return x;
 }
 
-const parseMaybeJson = (t) => { try { return JSON.parse(t); } catch { return null; } };
-
 const normalizeTitulos = (payload) => {
-  // Tenta capturar vários formatos comuns da PublicAPI do F360
   const arr =
     payload?.Result?.Parcelas ||
     payload?.Parcelas ||
@@ -28,109 +23,79 @@ const normalizeTitulos = (payload) => {
     payload?.data ||
     payload?.items ||
     [];
-
-  return arr
-    .map((p) => ({
-      id: p._id || p.Id || p.id || p.TituloId || p.ParcelaId || String(p.Numero || ""),
-      empresa: p.Empresa?.Nome || p.Empresa || p.Filial || "-",
-      fornecedor: p.Fornecedor || p.ClienteFornecedor || p.Sacado || "-",
-      vencimento: p.Vencimento || p.DataVencimento || p.Data || "-",
-      meioPagamento: p.MeioDePagamento || p.FormaPagamento || p.Forma || null,
-      historico: p.Historico || p.Descricao || p.Observacoes || "",
-      valor: Number(p.Valor || p.ValorBruto || p.ValorLiquido || 0),
-    }))
-    .filter((x) => x.id);
+  return arr.map((p) => ({
+    id: p._id || p.Id || p.id || p.TituloId || p.ParcelaId || String(p.Numero || ""),
+    empresa: p.Empresa?.Nome || p.Empresa || p.Filial || "-",
+    fornecedor: p.Fornecedor || p.ClienteFornecedor || p.Sacado || "-",
+    vencimento: p.Vencimento || p.DataVencimento || p.Data || "-",
+    meioPagamento: p.MeioDePagamento || p.FormaPagamento || p.Forma || null,
+    historico: p.Historico || p.Descricao || p.Observacoes || "",
+    valor: Number(p.Valor || p.ValorBruto || p.ValorLiquido || 0),
+  })).filter((x) => x.id);
 };
+
+// === Faz login e retorna token JWT ===
+async function getToken() {
+  const url = `${process.env.F360_BASE_URL}/Account/LoginPublicAPI`;
+  const body = JSON.stringify({
+    Email: process.env.F360_USER,
+    Senha: process.env.F360_PASS
+  });
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body
+  });
+  const txt = await r.text();
+  const json = parseMaybeJson(txt);
+  if (!r.ok) {
+    throw new Error(`Erro login F360 (${r.status}): ${txt}`);
+  }
+  const token = json?.token || json?.Token || json?.jwt;
+  if (!token) throw new Error("Login F360 sem token_jwt");
+  return token;
+}
 
 export const config = { runtime: "nodejs" };
 
 export default async function handler(req, res) {
-  // auth do painel
-  if (req.query.ping) {
-    if (req.headers["x-admin-secret"] !== process.env.ADMIN_SECRET) {
-      return res.status(401).json({ error: "unauthorized" });
-    }
-    return res.status(200).json({ ok: true });
-  }
+  // Autenticação do painel
   if (req.headers["x-admin-secret"] !== process.env.ADMIN_SECRET) {
     return res.status(401).json({ error: "unauthorized" });
   }
 
-  const base = (process.env.F360_BASE_URL || "").replace(/\/+$/, "");
-  if (!base) return res.status(400).json({ error: "F360_BASE_URL ausente" });
+  try {
+    const token = await getToken();
 
-  // período padrão: últimos 31 dias (conforme vários endpoints do F360 limitam a 31d)
-  const fim = fmtDate(new Date());
-  const inicio = fmtDate(addDays(new Date(), -31));
-  const pagina = 1;
+    const base = process.env.F360_BASE_URL.replace(/\/+$/, "");
+    const path = (process.env.F360_PATH || "").replace(/^\/+|\/+$/g, "");
 
-  // lista de caminhos prováveis para "Parcelas de Título"
-  const forced = (process.env.F360_PATH || "").replace(/^\/+|\/+$/g, "");
-  const candidates = [
-    // se você souber a rota exata, defina F360_PATH e fica em primeiro
-    ...(forced ? [forced] : []),
+    const inicio = fmtDate(addDays(new Date(), -31));
+    const fim = fmtDate(new Date());
 
-    // variações prováveis (plural/singular, nomes próximos)
-    "ParcelasDeTitulosPublicAPI/ListarParcelasDeTitulos",
-    "ParcelasDeTituloPublicAPI/ListarParcelasDeTitulos",
-    "ParcelasDeTitulosPublicAPI/ListarParcelas",
-    "ParcelasDeTituloPublicAPI/ListarParcelas",
-    "TitulosPublicAPI/ListarParcelasDeTitulos",
-    "TitulosPublicAPI/ListarParcelas",
-    "ParcelasPublicAPI/ListarParcelasDeTitulos",
-    "ParcelasPublicAPI/ListarParcelas",
+    const url = `${base}/${path}?pagina=1&inicio=${encodeURIComponent(inicio)}&fim=${encodeURIComponent(fim)}`;
 
-    // mesma coisa com prefixo /api (alguns ambientes exigem)
-    "api/ParcelasDeTitulosPublicAPI/ListarParcelasDeTitulos",
-    "api/ParcelasDeTituloPublicAPI/ListarParcelasDeTitulos",
-    "api/ParcelasDeTitulosPublicAPI/ListarParcelas",
-    "api/ParcelasDeTituloPublicAPI/ListarParcelas",
-    "api/TitulosPublicAPI/ListarParcelasDeTitulos",
-    "api/TitulosPublicAPI/ListarParcelas",
-    "api/ParcelasPublicAPI/ListarParcelasDeTitulos",
-    "api/ParcelasPublicAPI/ListarParcelas",
-  ];
-
-  const headers = {
-    Authorization: `Bearer ${process.env.F360_API_KEY}`,
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  };
-
-  const attempts = [];
-  for (const path of candidates) {
-    const url = `${base}/${path}?pagina=${pagina}&inicio=${encodeURIComponent(
-      inicio
-    )}&fim=${encodeURIComponent(fim)}`;
-    try {
-      const r = await fetch(url, { method: "GET", headers });
-      const text = await r.text();
-
-      // modo debug: devolve a primeira resposta crua
-      if (req.query.debug) return res.status(r.status).send(text);
-
-      if (!r.ok) {
-        attempts.push({ path, status: r.status, body: text.slice(0, 200) });
-        continue;
+    const r = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json"
       }
+    });
 
-      const json = parseMaybeJson(text);
-      if (!json) {
-        attempts.push({ path, status: r.status, body: "invalid json" });
-        continue;
-      }
+    const txt = await r.text();
+    if (req.query.debug) return res.status(r.status).send(txt);
 
-      const out = normalizeTitulos(json);
-      // mesmo que venha vazio, devolvemos vazio (não erro)
-      return res.status(200).json(out);
-    } catch (e) {
-      attempts.push({ path, error: String(e).slice(0, 200) });
-      continue;
-    }
+    if (!r.ok) throw new Error(`Erro F360 ${r.status}: ${txt}`);
+
+    const json = parseMaybeJson(txt);
+    if (!json) throw new Error("Resposta inválida F360");
+
+    const out = normalizeTitulos(json);
+    return res.status(200).json(out);
+
+  } catch (e) {
+    console.error("Erro f360.js", e);
+    return res.status(502).json({ error: "f360_login_or_fetch_failed", detail: String(e) });
   }
-
-  // se nada rolou, mostra as tentativas
-  const payload = { error: "f360_paths_exhausted", tries: attempts };
-  if (req.query.debug) return res.status(502).send(JSON.stringify(payload, null, 2));
-  return res.status(502).json(payload);
 }
