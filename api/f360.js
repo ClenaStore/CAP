@@ -1,5 +1,5 @@
 // /api/f360.js
-// API de integração com F360 + debug do ADMIN_SECRET
+// API de integração com F360 SEM senha de aprovação
 
 const parseMaybeJson = (t) => { try { return JSON.parse(t); } catch { return null; } };
 
@@ -58,22 +58,16 @@ async function getToken() {
 export const config = { runtime: "nodejs" };
 
 export default async function handler(req, res) {
-  // 1️⃣ Debug: mostra o ADMIN_SECRET configurado
+  // 🔹 Debug opcional (ver resposta pura da API)
   if (req.query.debug === "secret") {
-    return res.status(200).send(process.env.ADMIN_SECRET || "não definido");
+    return res.status(200).send("Sem senha — acesso liberado");
   }
 
-  // 2️⃣ Validação de senha
-  if (req.headers["x-admin-secret"] !== process.env.ADMIN_SECRET) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
-
-  // 3️⃣ Consulta parcelas no F360
   try {
     const token = await getToken();
 
     const base = process.env.F360_BASE_URL.replace(/\/+$/, "");
-    const path = "ParcelasDeTituloPublicAPI/ListarParcelasDeTitulos"; // rota confirmada pela doc
+    const path = "ParcelasDeTituloPublicAPI/ListarParcelasDeTitulos"; // rota confirmada
 
     const inicio = fmtDate(addDays(new Date(), -31));
     const fim = fmtDate(new Date());
