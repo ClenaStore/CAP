@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel de Aprovação • F360 Finanças</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {font-family: Arial, sans-serif; background:#f9fafb; margin:0; padding:0;}
+    header {background:#2563eb; color:#fff; padding:1rem; text-align:center;}
+    table {width:100%; border-collapse:collapse; margin:1rem 0;}
+    th, td {padding:0.8rem; border:1px solid #ddd;}
+    th {background:#f3f4f6;}
+    button {padding:0.4rem 0.8rem; border:none; border-radius:6px; cursor:pointer;}
+    .ok{background:#16a34a; color:#fff;}
+    .no{background:#ef4444; color:#fff;}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Aprovação de Parcelas – F360</h1>
+  </header>
+  <main>
+    <table id="parcelas">
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          <th>Fornecedor</th>
+          <th>Vencimento</th>
+          <th>Meio de Pagamento</th>
+          <th>Histórico</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </main>
+  <script>
+    async function carregarParcelas(){
+      let res = await fetch("/api/f360");
+      let dados = await res.json();
+      let tbody = document.querySelector("#parcelas tbody");
+      tbody.innerHTML = "";
+      dados.forEach(p => {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.empresa}</td>
+          <td>${p.fornecedor}</td>
+          <td>${p.vencimento}</td>
+          <td>${p.meioPagamento}</td>
+          <td>${p.historico}</td>
+          <td>
+            <button class="ok" onclick="acao('${p.id}','aprovar')">Aprovar</button>
+            <button class="no" onclick="acao('${p.id}','negar')">Negar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function acao(id, status){
+      await fetch("/api/approve",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({id, status})
+      });
+      carregarParcelas();
+    }
+
+    carregarParcelas();
+  </script>
+</body>
+</html>
