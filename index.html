@@ -6,109 +6,154 @@
   <title>Aprovação de Parcelas – F360</title>
   <style>
     body {
-      margin:0; padding:0;
-      font-family: Arial, Helvetica, sans-serif;
-      background:#f7f9fc;
-      color:#1e293b;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f8fafc;
     }
     header {
-      background:#2563eb;
-      color:white;
-      padding:20px;
-      text-align:center;
-      font-size:20px;
-      font-weight:bold;
+      background: #2563eb;
+      color: white;
+      text-align: center;
+      padding: 16px;
+      font-size: 22px;
+      font-weight: bold;
     }
     main {
-      padding:30px;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      min-height:80vh;
+      padding: 20px;
+      max-width: 1100px;
+      margin: auto;
     }
-    .card {
-      background:white;
-      padding:30px;
-      border-radius:12px;
-      box-shadow:0 8px 20px rgba(0,0,0,0.08);
-      width:100%;
-      max-width:420px;
-      text-align:center;
-    }
-    input {
-      width:100%;
-      padding:12px;
-      margin:12px 0;
-      border:1px solid #d1d5db;
-      border-radius:8px;
-      font-size:16px;
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      align-items: center;
     }
     button {
-      background:#2563eb;
-      color:white;
-      border:none;
-      padding:12px 20px;
-      border-radius:8px;
-      cursor:pointer;
-      font-size:16px;
-      font-weight:600;
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
     }
-    button:hover { background:#1d4ed8; }
-    #login-error {
-      color:red;
-      font-size:14px;
-      display:none;
+    button:hover { background: #1e40af; }
+    input {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 240px;
     }
-    #debug-secret {
-      color:blue;
-      font-size:12px;
-      margin-top:10px;
-      display:none;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+    }
+    th {
+      background: #f1f5f9;
+      font-weight: bold;
+    }
+    tr:hover { background: #f9fafb; }
+    .empty {
+      text-align: center;
+      padding: 20px;
+      color: #64748b;
     }
   </style>
 </head>
 <body>
   <header>Aprovação de Parcelas – F360</header>
   <main>
-    <div class="card">
-      <h2>Acesso do Aprovador</h2>
-      <p>Digite a senha de aprovação para carregar os títulos em aberto.</p>
-      <input type="password" id="senha" placeholder="Senha de aprovação"/>
-      <button id="entrar">Entrar</button>
-      <p id="login-error">Senha incorreta.</p>
-      <p id="debug-secret"></p>
+    <div class="toolbar">
+      <button onclick="carregar()">↻ Atualizar</button>
+      <span id="contador">0 itens</span>
+      <input type="text" id="filtro" placeholder="Pesquisar por fornecedor, histórico ou empresa…"/>
     </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          <th>Fornecedor</th>
+          <th>Vencimento</th>
+          <th>Meio de Pagamento</th>
+          <th>Histórico</th>
+          <th>Valor</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="lista">
+        <tr><td class="empty" colspan="7">Carregando…</td></tr>
+      </tbody>
+    </table>
   </main>
 
   <script>
-    async function tentarLogin() {
-      const senha = document.getElementById("senha").value.trim();
-      const r = await fetch("/api/f360", {
-        headers: { "x-admin-secret": senha }
-      });
-      if (r.status === 401) {
-        document.getElementById("login-error").style.display = "block";
-        checkDebugSecret(senha); // debug extra
-      } else {
-        window.location.href = "/painel.html?secret=" + encodeURIComponent(senha);
-      }
-    }
+    let dados = [];
 
-    async function checkDebugSecret(senha) {
+    async function carregar() {
+      document.querySelector("#lista").innerHTML =
+        `<tr><td colspan="7" class="empty">Carregando…</td></tr>`;
       try {
-        const r = await fetch("/api/f360?debug=secret", {
-          headers: { "x-admin-secret": senha }
-        });
-        const txt = await r.text();
-        document.getElementById("debug-secret").style.display = "block";
-        document.getElementById("debug-secret").innerText =
-          "DEBUG • ADMIN_SECRET no server: " + txt;
+        const r = await fetch("/api/f360");
+        if (!r.ok) throw new Error("Erro API: " + r.status);
+        dados = await r.json();
+        render(dados);
       } catch (e) {
-        console.error("Erro debug:", e);
+        document.querySelector("#lista").innerHTML =
+          `<tr><td colspan="7" class="empty">Erro ao consultar API: ${e}</td></tr>`;
       }
     }
 
-    document.getElementById("entrar").addEventListener("click", tentarLogin);
+    function render(arr) {
+      const filtro = document.querySelector("#filtro").value.toLowerCase();
+      const filtrados = arr.filter(p =>
+        p.empresa.toLowerCase().includes(filtro) ||
+        p.fornecedor.toLowerCase().includes(filtro) ||
+        p.historico.toLowerCase().includes(filtro)
+      );
+      document.querySelector("#contador").textContent = filtrados.length + " itens";
+
+      if (filtrados.length === 0) {
+        document.querySelector("#lista").innerHTML =
+          `<tr><td colspan="7" class="empty">Nada encontrado.</td></tr>`;
+        return;
+      }
+
+      document.querySelector("#lista").innerHTML = filtrados.map(p => `
+        <tr>
+          <td>${p.empresa}</td>
+          <td>${p.fornecedor}</td>
+          <td>${p.vencimento}</td>
+          <td>${p.meioPagamento || "-"}</td>
+          <td>${p.historico || "-"}</td>
+          <td>R$ ${p.valor.toFixed(2)}</td>
+          <td>
+            <button onclick="aprovar('${p.id}')">Aprovar</button>
+            <button onclick="negar('${p.id}')">Negar</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function aprovar(id) {
+      alert("✔️ Aprovado: " + id);
+      // Aqui você chama /api/approve (se quiser integrar)
+    }
+
+    function negar(id) {
+      alert("❌ Negado: " + id);
+      // Aqui você chama /api/deny (se quiser integrar)
+    }
+
+    document.querySelector("#filtro").addEventListener("input", () => render(dados));
+    carregar();
   </script>
 </body>
 </html>
