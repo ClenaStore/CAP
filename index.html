@@ -234,8 +234,10 @@
 </div>
 
 <div class="footer">
+  <button id="btnSelectAll" class="btn-massa" style="background:#22314b;">Selecionar Todos</button>
   <button id="btnMassa" class="btn-massa">✓ Liquidar Selecionados</button>
 </div>
+
 
 <div id="overlay"></div>
 
@@ -466,15 +468,41 @@ function atualizarResumo(){
     resumo.appendChild(div);
   });
 }
+function toggleSelecionarTodos(){
+  const btn = $("btnSelectAll");
+  const todosCards = document.querySelectorAll(".titulo input[type=checkbox]");
+  const todosSelecionados = Array.from(todosCards).every(chk => chk.checked);
+
+  SELEC = [];
+  todosCards.forEach(chk => {
+    if(todosSelecionados){
+      chk.checked = false;
+    } else {
+      const card = chk.closest(".titulo");
+      if(card.dataset.status === "Aprovado"){
+        chk.checked = true;
+        SELEC.push(card);
+      }
+    }
+  });
+
+  salvarSelecoes();
+  atualizarBtnMassa();
+}
+$("btnSelectAll").onclick = toggleSelecionarTodos;
 
 function atualizarBtnMassa(){
   const btnMassa = $("btnMassa");
+  const btnSelectAll = $("btnSelectAll");
   if(SELEC.length > 0){
     btnMassa.classList.add("show");
   } else {
     btnMassa.classList.remove("show");
   }
+  // botão de selecionar todos sempre aparece
+  btnSelectAll.classList.add("show");
 }
+
 
 $("btnTotais").onclick = () => {
   const wrapper = $("totaisWrapper");
