@@ -243,6 +243,7 @@
 
 <script>
 const endpoint="https://script.google.com/macros/s/AKfycbzJS4UkF6WZ-duyMJW_h3e5fo4Hev6Hq1a7rGhWNYCNJ6V_ou0lkN6wS49eeANf4Yuy/exec";
+  const EMPRESAS = ["cap delicia","cap villa","cap padaria","cap mercatto","cap m.kids"];
 const $=id=>document.getElementById(id);
 const BRL=n=>(isNaN(n)?0:n).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const iso = d => {const dt=new Date(d);dt.setMinutes(dt.getMinutes()-dt.getTimezoneOffset());return dt.toISOString().slice(0,10);};
@@ -387,6 +388,18 @@ async function refresh(auto=false){
     const data=await r.json();
     const todos = data.titulos || data;
     ULTIMOS_DADOS = todos; // 🔹 guarda todos da empresa
+// 🔹 em segundo plano carrega as demais empresas
+EMPRESAS.filter(e => e !== empresa).forEach(emp => {
+  fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(emp)}`)
+    .then(r => r.json())
+    .then(data => {
+      const ts = data.titulos || data;
+      // adiciona a propriedade empresa
+      ts.forEach(t => t.empresa = emp);
+      ULTIMOS_DADOS = ULTIMOS_DADOS.concat(ts);
+    })
+    .catch(e => console.error("Erro ao carregar em segundo plano", emp, e));
+});
 
     // 🔹 pega menor e maior vencimento (sempre)
   // 🔹 pega menor e maior vencimento APENAS dos aprovados
