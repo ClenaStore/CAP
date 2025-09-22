@@ -235,14 +235,12 @@
 
 <div class="footer">
   <button id="btnMassa" class="btn-massa">✓ Liquidar Selecionados</button>
-  <button id="btnSelectAll" class="btn-massa" style="background:#22314b;">Selecionar Todos</button>
 </div>
 
 <div id="overlay"></div>
 
 <script>
 const endpoint="https://script.google.com/macros/s/AKfycbzJS4UkF6WZ-duyMJW_h3e5fo4Hev6Hq1a7rGhWNYCNJ6V_ou0lkN6wS49eeANf4Yuy/exec";
-  const EMPRESAS = ["cap delicia","cap villa","cap padaria","cap mercatto","cap m.kids"];
 const $=id=>document.getElementById(id);
 const BRL=n=>(isNaN(n)?0:n).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const iso = d => {const dt=new Date(d);dt.setMinutes(dt.getMinutes()-dt.getTimezoneOffset());return dt.toISOString().slice(0,10);};
@@ -362,29 +360,6 @@ function parseDMY(str) {
   const [d,m,y] = str.split("/");
   return `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
 }
-  function toggleSelecionarTodos(){
-  const btn = $("btnSelectAll");
-  const todosCards = document.querySelectorAll(".titulo input[type=checkbox]");
-  const todosSelecionados = Array.from(todosCards).every(chk => chk.checked);
-
-  SELEC = [];
-  todosCards.forEach(chk => {
-    if(todosSelecionados){
-      chk.checked = false;
-    } else {
-      const card = chk.closest(".titulo");
-      if(card.dataset.status === "Aprovado"){
-        chk.checked = true;
-        SELEC.push(card);
-      }
-    }
-  });
-
-  salvarSelecoes();
-  atualizarBtnMassa();
-}
-$("btnSelectAll").onclick = toggleSelecionarTodos;
-
 
   function toDate(str){
   if (!str) return null;
@@ -410,17 +385,6 @@ async function refresh(auto=false){
     const data=await r.json();
     const todos = data.titulos || data;
     ULTIMOS_DADOS = todos; // 🔹 guarda todos da empresa
-// 🔹 em segundo plano carrega as demais empresas
-EMPRESAS.filter(e => e !== empresa).forEach(emp => {
-  fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(emp)}`)
-    .then(r => r.json())
-    .then(data => {
-      const ts = data.titulos || data;
-      ts.forEach(t => t.empresa = emp);
-      ULTIMOS_DADOS = ULTIMOS_DADOS.concat(ts);
-    })
-    .catch(e => console.error("Erro ao carregar bg", emp, e));
-});
 
     // 🔹 pega menor e maior vencimento (sempre)
   // 🔹 pega menor e maior vencimento APENAS dos aprovados
@@ -477,12 +441,10 @@ function atualizarResumo(){
   const iniDate = toDate(ini);
   const fimDate = toDate(fim);
 
-  // 🔹 considera só empresa selecionada + período
-  const empresaSel = $("filtroEmpresa").value.toLowerCase();
+  // 🔹 considera só empresa + período (ignora status e meio)
   const dados = ULTIMOS_DADOS.filter(t=>{
     const d = toDate(iso(t.vencimento));
-    return (t.empresa || "").toLowerCase() === empresaSel &&
-           (!iniDate || d >= iniDate) && (!fimDate || d <= fimDate);
+    return (!iniDate || d >= iniDate) && (!fimDate || d <= fimDate);
   });
 
   const counts={Aprovado:0,Pendente:0,Negado:0,Liquidado:0};
@@ -496,26 +458,22 @@ function atualizarResumo(){
   const total = Object.values(counts).reduce((a,b)=>a+b,0);
   const resumo=$("statusResumo");
   resumo.innerHTML="";
-  Object.entries(counts).forEach(([status,valor])=>{
-    const perc=total ? ((valor/total)*100).toFixed(1) : 0;
+  Object.entries(counts).forEach(([status,qtd])=>{
+    const perc=total?((qtd/total)*100).toFixed(1):0;
     const div=document.createElement("div");
     div.className=status.toLowerCase();
-    div.textContent=`${status}: ${perc}% (${BRL(valor)})`;
+    div.textContent=`${status}: ${perc}% (${BRL(qtd)})`;
     resumo.appendChild(div);
   });
 }
 
-
 function atualizarBtnMassa(){
   const btnMassa = $("btnMassa");
-  const btnSelectAll = $("btnSelectAll");
   if(SELEC.length > 0){
     btnMassa.classList.add("show");
   } else {
     btnMassa.classList.remove("show");
   }
-  // Sempre mostra o botão de selecionar todos
-  btnSelectAll.classList.add("show");
 }
 
 $("btnTotais").onclick = () => {
