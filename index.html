@@ -398,9 +398,15 @@ async function refresh(auto=false){
         fp.setDate([minBR, maxBR], false); // atualiza range
       }
     }
+const fp = document.querySelector("#filtroPeriodo")._flatpickr;
+let ini, fim;
+if (fp && fp.selectedDates.length) {
+  ini = iso(fp.selectedDates[0]);
+  fim = iso(fp.selectedDates[1] || fp.selectedDates[0]);
+} else {
+  ini = fim = iso(new Date());
+}
 
-    const periodo=$("filtroPeriodo").value;
-    const [ini,fim] = periodo.includes(" até ") ? periodo.split(" até ") : [periodo,periodo];
     const iniDate = toDate(ini);
     const fimDate = toDate(fim);
 
@@ -471,15 +477,17 @@ $("btnTotais").onclick = () => {
   const wrapper = $("totaisWrapper");
   wrapper.classList.toggle("active");
   if(wrapper.classList.contains("active")){
-    const periodo = $("filtroPeriodo").value;
-    const [ini,fim] = periodo.includes(" até ") ? periodo.split(" até ") : [periodo,periodo];
-    const iniDate = toDate(ini);
-    const fimDate = toDate(fim);
+    const fp = document.querySelector("#filtroPeriodo")._flatpickr;
+    let ini, fim;
+    if (fp && fp.selectedDates.length) {
+      ini = iso(fp.selectedDates[0]);
+      fim = iso(fp.selectedDates[1] || fp.selectedDates[0]);
+    }
 
-    // 🔹 considera só empresa + período (ignora pesquisa/status selecionado)
+    // 🔹 considera só empresa + período
     const dados = ULTIMOS_DADOS.filter(t=>{
-      const d = toDate(iso(t.vencimento));
-      return (!iniDate || d >= iniDate) && (!fimDate || d <= fimDate);
+      const d = iso(t.vencimento);
+      return (!ini || d >= ini) && (!fim || d <= fim);
     });
 
     const totais = {};
@@ -492,7 +500,7 @@ $("btnTotais").onclick = () => {
       // soma valores
       totais[meio] = (totais[meio] || 0) + valor;
 
-      // conta status por modalidade
+      // inicializa contadores por modalidade
       if(!statusPorMeio[meio]) statusPorMeio[meio] = {total:0, aprovados:0, pendentes:0, negados:0};
       statusPorMeio[meio].total++;
       if(t.status === "Aprovado") statusPorMeio[meio].aprovados++;
@@ -507,10 +515,12 @@ $("btnTotais").onclick = () => {
       if(aprovados === total){
         extra = "(todas aprovadas ✅)";
       } else {
-        const faltando = total - aprovados;
-        if(negados > 0) extra = `(⚠ ${negados} negado(s), ${faltando} não aprov.)`;
-        else if(pendentes > 0) extra = `(faltam ${pendentes} pendentes)`;
-        else extra = `(faltam ${faltando} aprovar)`;
+        let partes = [];
+        if (pendentes > 0) partes.push(`${pendentes} pendente(s)`);
+        if (negados > 0) partes.push(`${negados} negado(s)`);
+        const faltam = total - aprovados - pendentes - negados;
+        if (faltam > 0) partes.push(`${faltam} não aprov.`);
+        extra = `(${partes.join(", ")})`;
       }
 
       const card = document.createElement("div");
