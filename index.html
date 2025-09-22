@@ -299,6 +299,13 @@
 
 <script>
 const endpoint="https://script.google.com/macros/s/AKfycbzJS4UkF6WZ-duyMJW_h3e5fo4Hev6Hq1a7rGhWNYCNJ6V_ou0lkN6wS49eeANf4Yuy/exec";
+const EMPRESAS = [
+  "cap delicia",
+  "cap villa",
+  "cap padaria",
+  "cap mercatto",
+  "cap m.kids"
+];
 const $=id=>document.getElementById(id);
 const BRL=n=>(isNaN(n)?0:n).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const iso = d => {const dt=new Date(d);dt.setMinutes(dt.getMinutes()-dt.getTimezoneOffset());return dt.toISOString().slice(0,10);};
@@ -434,45 +441,53 @@ let ULTIMOS_DADOS=[];
 async function refresh(auto=false){
   if(auto){$("miniSpinner").classList.add("active");}
   else{$("overlay").classList.add("active");}
+
   const status=$("filtroStatus").value;
   const meio=$("filtroMeio").value;
-  const empresa=$("filtroEmpresa").value;
+  const empresaSelecionada=$("filtroEmpresa").value;
 
   try{
-    const r=await fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(empresa)}`);
-    const data=await r.json();
-    const todos = data.titulos || data;
-    ULTIMOS_DADOS = todos; // 🔹 guarda todos da empresa
+    ULTIMOS_DADOS = [];
 
-    // 🔹 pega menor e maior vencimento (sempre)
-  // 🔹 pega menor e maior vencimento APENAS dos aprovados
-const aprovados = todos.filter(t => t.status === "Aprovado");
-if(aprovados.length){
-  const datas = aprovados.map(t => iso(t.vencimento)).sort();
-  const min = datas[0];
-  const max = datas[datas.length-1];
-  const fp = document.querySelector("#filtroPeriodo")._flatpickr;
-  if (fp) {
-    const minBR = min.split("-").reverse().join("/");
-    const maxBR = max.split("-").reverse().join("/");
-    fp.setDate([minBR, maxBR], false); // atualiza range com aprovados
-  }
-}
+    // 🔹 busca títulos de todas as empresas
+    for(const emp of EMPRESAS){
+      try{
+        const r=await fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(emp)}`);
+        const data=await r.json();
+        const titulos = data.titulos || data;
+        titulos.forEach(t => { t.empresa = emp.toUpperCase(); }); // garante campo empresa
+        ULTIMOS_DADOS = ULTIMOS_DADOS.concat(titulos);
+      }catch(e){console.error("Erro ao carregar", emp, e);}
+    }
 
-const fp = document.querySelector("#filtroPeriodo")._flatpickr;
-let ini, fim;
-if (fp && fp.selectedDates.length) {
-  ini = iso(fp.selectedDates[0]);
-  fim = iso(fp.selectedDates[1] || fp.selectedDates[0]);
-} else {
-  ini = fim = iso(new Date());
-}
+    // 🔹 define range pelo vencimento dos aprovados da empresa selecionada
+    const aprovados = ULTIMOS_DADOS.filter(t => t.empresa.toLowerCase() === empresaSelecionada && t.status === "Aprovado");
+    if(aprovados.length){
+      const datas = aprovados.map(t => iso(t.vencimento)).sort();
+      const min = datas[0];
+      const max = datas[datas.length-1];
+      const fp = document.querySelector("#filtroPeriodo")._flatpickr;
+      if (fp) {
+        const minBR = min.split("-").reverse().join("/");
+        const maxBR = max.split("-").reverse().join("/");
+        fp.setDate([minBR, maxBR], false);
+      }
+    }
 
+    const fp = document.querySelector("#filtroPeriodo")._flatpickr;
+    let ini, fim;
+    if (fp && fp.selectedDates.length) {
+      ini = iso(fp.selectedDates[0]);
+      fim = iso(fp.selectedDates[1] || fp.selectedDates[0]);
+    } else {
+      ini = fim = iso(new Date());
+    }
     const iniDate = toDate(ini);
     const fimDate = toDate(fim);
 
-    // TITULOS = filtrados pelo status + meio + pesquisa
-    TITULOS = todos.filter(t => {
+    // 🔹 aplica filtros e mostra só da empresa escolhida no select
+    TITULOS = ULTIMOS_DADOS.filter(t => {
+      if(t.empresa.toLowerCase() !== empresaSelecionada) return false;
       const d = toDate(iso(t.vencimento));
       const st = t.status || "";
       const mp = (t.meio_pagamento || "Outros");
@@ -491,6 +506,7 @@ if (fp && fp.selectedDates.length) {
     else{$("overlay").classList.remove("active");}
   }
 }
+
 let todosSelecionados = false;
 
 function selecionarTodos(){
