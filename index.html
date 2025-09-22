@@ -460,18 +460,37 @@ $("btnTotais").onclick = () => {
   wrapper.classList.toggle("active");
   if(wrapper.classList.contains("active")){
     const totais = {};
-    TITULOS.filter(t => t.status !== "Negado").forEach(t => {
+    const statusPorMeio = {};
+
+    TITULOS.forEach(t => {
       const meio = t.meio_pagamento || "Outros";
       const valor = Number(String(t.valor).replace("R$","").replace(/\./g,"").replace(",",".")) || 0;
+
+      // soma valores
       totais[meio] = (totais[meio] || 0) + valor;
+
+      // conta status por modalidade
+      if(!statusPorMeio[meio]) statusPorMeio[meio] = {total:0, aprovados:0};
+      statusPorMeio[meio].total++;
+      if(t.status === "Aprovado") statusPorMeio[meio].aprovados++;
     });
+
     wrapper.innerHTML = "";
     Object.entries(totais).forEach(([meio, valor]) => {
+      const {total, aprovados} = statusPorMeio[meio];
+      let extra = "";
+      if(aprovados === total){
+        extra = "(todas aprovadas ✅)";
+      } else {
+        extra = `(faltam ${total - aprovados} aprovar)`;
+      }
+
       const card = document.createElement("div");
       card.className = "total-card";
-      card.innerHTML = `<span>${meio}</span><span>${BRL(valor)}</span>`;
+      card.innerHTML = `<span>${meio}</span><span>${BRL(valor)} ${extra}</span>`;
       wrapper.appendChild(card);
     });
+
     const totalGeral = Object.values(totais).reduce((a,b)=>a+b,0);
     const cardTotal = document.createElement("div");
     cardTotal.className = "total-card";
@@ -480,6 +499,7 @@ $("btnTotais").onclick = () => {
     wrapper.appendChild(cardTotal);
   }
 };
+
 
 (function boot(){
   const hoje=iso(new Date());
