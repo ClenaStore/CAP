@@ -435,18 +435,37 @@ if (fp && fp.selectedDates.length) {
     else{$("overlay").classList.remove("active");}
   }
 }
+let todosSelecionados = false;
+
 function selecionarTodos(){
   SELEC = [];
-  document.querySelectorAll(".titulo").forEach(card=>{
-    if(card.dataset.status === "Aprovado"){
+  const cards = document.querySelectorAll(".titulo");
+  if(!todosSelecionados){
+    // Seleciona todos os aprovados
+    cards.forEach(card=>{
+      if(card.dataset.status === "Aprovado"){
+        const chk = card.querySelector("input[type=checkbox]");
+        chk.checked = true;
+        if(!SELEC.includes(card)) SELEC.push(card);
+      }
+    });
+    $("btnSelecionarTodos").textContent = "☒ Desmarcar Todos";
+    todosSelecionados = true;
+  } else {
+    // Desmarca todos
+    cards.forEach(card=>{
       const chk = card.querySelector("input[type=checkbox]");
-      chk.checked = true;
-      if(!SELEC.includes(card)) SELEC.push(card);
-    }
-  });
+      chk.checked = false;
+    });
+    SELEC = [];
+    $("btnSelecionarTodos").textContent = "☑ Selecionar Todos";
+    todosSelecionados = false;
+  }
   salvarSelecoes();
   atualizarBtnMassa();
 }
+$("btnSelecionarTodos").onclick = selecionarTodos;
+
 $("btnSelecionarTodos").onclick = selecionarTodos;
 
 
