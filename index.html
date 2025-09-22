@@ -234,8 +234,10 @@
 </div>
 
 <div class="footer">
+  <button id="btnSelecionarTodos" class="btn-massa" style="background:#374151;">☑ Selecionar Todos</button>
   <button id="btnMassa" class="btn-massa">✓ Liquidar Selecionados</button>
 </div>
+
 
 <div id="overlay"></div>
 
@@ -433,6 +435,19 @@ if (fp && fp.selectedDates.length) {
     else{$("overlay").classList.remove("active");}
   }
 }
+function selecionarTodos(){
+  SELEC = [];
+  document.querySelectorAll(".titulo").forEach(card=>{
+    if(card.dataset.status === "Aprovado"){
+      const chk = card.querySelector("input[type=checkbox]");
+      chk.checked = true;
+      if(!SELEC.includes(card)) SELEC.push(card);
+    }
+  });
+  salvarSelecoes();
+  atualizarBtnMassa();
+}
+$("btnSelecionarTodos").onclick = selecionarTodos;
 
 
 function atualizarResumo(){
