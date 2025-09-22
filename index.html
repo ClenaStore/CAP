@@ -60,20 +60,6 @@
   .statusResumo .pendente{color:var(--amber)}
   .statusResumo .negado{color:var(--red)}
   .statusResumo .liquidado{color:var(--blue)}
-  #btnSelecionarTodos {
-  display: inline-block !important; /* sempre visível */
-}
-#listaEmpresas label {
-  background:#0b1528;
-  border:1px solid #22314b;
-  padding:6px 10px;
-  border-radius:6px;
-  cursor:pointer;
-}
-#listaEmpresas input {
-  transform:scale(1.2);
-}
-
 #miniSpinner {
   width: 14px;
   height: 14px;
@@ -106,31 +92,6 @@
 
   .container{padding:16px;max-width:100%;margin:0 auto}
   .lista{display:flex;flex-direction:column;gap:16px;width:100%}
-.modal {
-  position: fixed;
-  top:0;left:0;right:0;bottom:0;
-  background: rgba(0,0,0,0.6);
-  display: none;
-  justify-content:center;
-  align-items:center;
-  z-index:2000;
-}
-.modal.show { display: flex; }
-.modal-content {
-  background:#101a2f;
-  padding:20px;
-  border-radius:12px;
-  max-width:400px;
-  width:90%;
-  color:var(--ink);
-}
-.modal-content h2 { margin-top:0;font-size:18px;font-weight:800; }
-.modal-content .acoes {
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-  margin-top:20px;
-}
 
 .titulo {
   width:95%;
@@ -254,7 +215,6 @@
     <option value="cap m.kids">M.KIDS</option>
   </select>
 </div>
-</div>
   <div style="margin-top:8px;">
     <button id="btnTotais" class="btn" style="background:#22314b;color:#fff;width:100%;border-radius:8px;padding:10px;">
       📊 Ver Totais
@@ -274,34 +234,13 @@
 </div>
 
 <div class="footer">
-  <button id="btnSelecionarTodos" class="btn-massa" style="background:#374151;">☑ Selecionar Todos</button>
   <button id="btnMassa" class="btn-massa">✓ Liquidar Selecionados</button>
 </div>
 
-
 <div id="overlay"></div>
-  <!-- MODAL DE EMPRESAS -->
-<div id="modalEmpresas" class="modal">
-  <div class="modal-content">
-    <h2>Liquidar Empresas</h2>
-    <div id="listaEmpresas" style="margin-top:10px;"></div>
-    <div class="acoes">
-      <button id="btnCancelarModal" class="btn" style="background:#374151;color:#fff;">Cancelar</button>
-      <button id="btnConfirmarMassa" class="btn liquidar">✓ Confirmar Liquidação</button>
-    </div>
-  </div>
-</div>
-
 
 <script>
 const endpoint="https://script.google.com/macros/s/AKfycbzJS4UkF6WZ-duyMJW_h3e5fo4Hev6Hq1a7rGhWNYCNJ6V_ou0lkN6wS49eeANf4Yuy/exec";
-const EMPRESAS = [
-  "cap delicia",
-  "cap villa",
-  "cap padaria",
-  "cap mercatto",
-  "cap m.kids"
-];
 const $=id=>document.getElementById(id);
 const BRL=n=>(isNaN(n)?0:n).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const iso = d => {const dt=new Date(d);dt.setMinutes(dt.getMinutes()-dt.getTimezoneOffset());return dt.toISOString().slice(0,10);};
@@ -437,68 +376,45 @@ let ULTIMOS_DADOS=[];
 async function refresh(auto=false){
   if(auto){$("miniSpinner").classList.add("active");}
   else{$("overlay").classList.add("active");}
-
   const status=$("filtroStatus").value;
   const meio=$("filtroMeio").value;
-  const empresaSelecionada=$("filtroEmpresa").value;
+  const empresa=$("filtroEmpresa").value;
 
   try{
-    ULTIMOS_DADOS = [];
+    const r=await fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(empresa)}`);
+    const data=await r.json();
+    const todos = data.titulos || data;
+    ULTIMOS_DADOS = todos; // 🔹 guarda todos da empresa
 
-    // 🔹 busca títulos de todas as empresas
- ULTIMOS_DADOS = [];
-
-// 🔹 1. Carrega rápido apenas a empresa selecionada
-try {
-  const r = await fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(empresaSelecionada)}`);
-  const data = await r.json();
-  const titulos = data.titulos || data;
-  titulos.forEach(t => { t.empresa = empresaSelecionada; });
-  ULTIMOS_DADOS = ULTIMOS_DADOS.concat(titulos);
-} catch(e) {
-  console.error("Erro ao carregar principal", empresaSelecionada, e);
+    // 🔹 pega menor e maior vencimento (sempre)
+  // 🔹 pega menor e maior vencimento APENAS dos aprovados
+const aprovados = todos.filter(t => t.status === "Aprovado");
+if(aprovados.length){
+  const datas = aprovados.map(t => iso(t.vencimento)).sort();
+  const min = datas[0];
+  const max = datas[datas.length-1];
+  const fp = document.querySelector("#filtroPeriodo")._flatpickr;
+  if (fp) {
+    const minBR = min.split("-").reverse().join("/");
+    const maxBR = max.split("-").reverse().join("/");
+    fp.setDate([minBR, maxBR], false); // atualiza range com aprovados
+  }
 }
 
-// 🔹 2. Em segundo plano, busca as outras empresas
-EMPRESAS.filter(e => e !== empresaSelecionada).forEach(emp => {
-  fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(emp)}`)
-    .then(r => r.json())
-    .then(data => {
-      const titulos = data.titulos || data;
-      titulos.forEach(t => { t.empresa = emp; });
-      ULTIMOS_DADOS = ULTIMOS_DADOS.concat(titulos);
-    })
-    .catch(e => console.error("Erro ao carregar em segundo plano", emp, e));
-});
+const fp = document.querySelector("#filtroPeriodo")._flatpickr;
+let ini, fim;
+if (fp && fp.selectedDates.length) {
+  ini = iso(fp.selectedDates[0]);
+  fim = iso(fp.selectedDates[1] || fp.selectedDates[0]);
+} else {
+  ini = fim = iso(new Date());
+}
 
-    // 🔹 define range pelo vencimento dos aprovados da empresa selecionada
-    const aprovados = ULTIMOS_DADOS.filter(t => t.empresa.toLowerCase() === empresaSelecionada && t.status === "Aprovado");
-    if(aprovados.length){
-      const datas = aprovados.map(t => iso(t.vencimento)).sort();
-      const min = datas[0];
-      const max = datas[datas.length-1];
-      const fp = document.querySelector("#filtroPeriodo")._flatpickr;
-      if (fp) {
-        const minBR = min.split("-").reverse().join("/");
-        const maxBR = max.split("-").reverse().join("/");
-        fp.setDate([minBR, maxBR], false);
-      }
-    }
-
-    const fp = document.querySelector("#filtroPeriodo")._flatpickr;
-    let ini, fim;
-    if (fp && fp.selectedDates.length) {
-      ini = iso(fp.selectedDates[0]);
-      fim = iso(fp.selectedDates[1] || fp.selectedDates[0]);
-    } else {
-      ini = fim = iso(new Date());
-    }
     const iniDate = toDate(ini);
     const fimDate = toDate(fim);
 
-    // 🔹 aplica filtros e mostra só da empresa escolhida no select
-    TITULOS = ULTIMOS_DADOS.filter(t => {
-      if(t.empresa.toLowerCase() !== empresaSelecionada) return false;
+    // TITULOS = filtrados pelo status + meio + pesquisa
+    TITULOS = todos.filter(t => {
       const d = toDate(iso(t.vencimento));
       const st = t.status || "";
       const mp = (t.meio_pagamento || "Outros");
@@ -517,39 +433,6 @@ EMPRESAS.filter(e => e !== empresaSelecionada).forEach(emp => {
     else{$("overlay").classList.remove("active");}
   }
 }
-
-let todosSelecionados = false;
-
-function selecionarTodos(){
-  SELEC = [];
-  const cards = document.querySelectorAll(".titulo");
-  if(!todosSelecionados){
-    // Seleciona todos os aprovados
-    cards.forEach(card=>{
-      if(card.dataset.status === "Aprovado"){
-        const chk = card.querySelector("input[type=checkbox]");
-        chk.checked = true;
-        if(!SELEC.includes(card)) SELEC.push(card);
-      }
-    });
-    $("btnSelecionarTodos").textContent = "☒ Desmarcar Todos";
-    todosSelecionados = true;
-  } else {
-    // Desmarca todos
-    cards.forEach(card=>{
-      const chk = card.querySelector("input[type=checkbox]");
-      chk.checked = false;
-    });
-    SELEC = [];
-    $("btnSelecionarTodos").textContent = "☑ Selecionar Todos";
-    todosSelecionados = false;
-  }
-  salvarSelecoes();
-  atualizarBtnMassa();
-}
-$("btnSelecionarTodos").onclick = selecionarTodos;
-
-$("btnSelecionarTodos").onclick = selecionarTodos;
 
 
 function atualizarResumo(){
@@ -673,80 +556,6 @@ $("btnTotais").onclick = () => {
   refresh(false);
   setInterval(()=>refresh(true),10*1000);
 })();
-
-  // 🔹 Abrir modal e listar empresas com títulos aprovados
-$("btnMassaEmpresas").onclick = () => {
-  const empresasMap = {};
-  ULTIMOS_DADOS.forEach(t => {
-    if(t.status === "Aprovado"){
-      if(!empresasMap[t.empresa]) empresasMap[t.empresa] = [];
-      empresasMap[t.empresa].push(t);
-    }
-  });
-
-  const lista = $("listaEmpresas");
-  lista.innerHTML = "";
-  Object.entries(empresasMap).forEach(([empresa, titulos])=>{
-    const div = document.createElement("div");
-    div.innerHTML = `
-      <label style="display:flex;align-items:center;gap:8px;margin:4px 0;">
-        <input type="checkbox" value="${empresa}">
-        ${empresa} <span style="color:var(--muted)">(${titulos.length} títulos)</span>
-      </label>
-    `;
-    lista.appendChild(div);
-  });
-
-  $("modalEmpresas").classList.add("show");
-};
-
-// 🔹 Fechar modal
-$("btnCancelarModal").onclick = () => {
-  $("modalEmpresas").classList.remove("show");
-};
-
-// 🔹 Confirmar liquidação em massa por empresa
-$("btnConfirmarMassa").onclick = async () => {
-  const checks = document.querySelectorAll("#listaEmpresas input:checked");
-  if(checks.length === 0){
-    alert("Selecione ao menos uma empresa para liquidar.");
-    return;
-  }
-
-  const btn = $("btnConfirmarMassa");
-  btn.classList.add("loading");
-
-  for(const chk of checks){
-    const empresa = chk.value;
-    const titulos = ULTIMOS_DADOS.filter(
-  t => t.empresa.toLowerCase() === empresa.toLowerCase() && t.status === "Aprovado"
-);
-
-    for(const t of titulos){
-      try{
-        const r=await fetch(`${endpoint}?action=atualizar&empresa=${encodeURIComponent(t.empresa)}&linha=${t.linha}&status=Liquidado`);
-        const txt=await r.text();
-
-        // Atualiza no DOM sem esperar o refresh
-        const card = document.querySelector(`.titulo[data-linha="${t.linha}"]`);
-        if(card){
-          card.querySelector(".pill").textContent="Liquidado";
-          card.querySelector(".pill").className="pill liquidado";
-          card.dataset.status="Liquidado";
-          const btnCard = card.querySelector(".btn.liquidar");
-          if(btnCard){ btnCard.disabled = true; btnCard.style.opacity = "0.5"; }
-        }
-
-      }catch(e){console.error(e);}
-    }
-  }
-
-  btn.classList.remove("loading");
-  $("modalEmpresas").classList.remove("show");
-  refresh(false);
-};
-
-
 </script>
 </body>
 </html>
