@@ -462,48 +462,27 @@ $("btnTotais").onclick = () => {
     const totais = {};
     const statusPorMeio = {};
 
-    // pega todos os títulos filtrados (exceto status)
-    const periodo = $("filtroPeriodo").value;
-    const [ini,fim] = periodo.includes(" até ") ? periodo.split(" até ") : [periodo,periodo];
-    const iniDate = toDate(ini);
-    const fimDate = toDate(fim);
-    const empresa = $("filtroEmpresa").value;
-    const meioSelecionado = $("filtroMeio").value;
-
-    const base = (window.ULTIMOS_DADOS || []).filter(t=>{
-      const d = toDate(iso(t.vencimento));
-      const mp = t.meio_pagamento || "Outros";
-      return t.empresa === empresa
-          && (!iniDate || d >= iniDate)
-          && (!fimDate || d <= fimDate)
-          && (meioSelecionado==="Todos" || mp===meioSelecionado);
-    });
-
-    base.forEach(t => {
+    TITULOS.forEach(t => {
       const meio = t.meio_pagamento || "Outros";
       const valor = Number(String(t.valor).replace("R$","").replace(/\./g,"").replace(",",".")) || 0;
 
       // soma valores
       totais[meio] = (totais[meio] || 0) + valor;
 
-      // conta status
-      if(!statusPorMeio[meio]) statusPorMeio[meio] = {total:0, aprovados:0, pendentes:0};
+      // conta status por modalidade
+      if(!statusPorMeio[meio]) statusPorMeio[meio] = {total:0, aprovados:0};
       statusPorMeio[meio].total++;
       if(t.status === "Aprovado") statusPorMeio[meio].aprovados++;
-      if(t.status === "Pendente") statusPorMeio[meio].pendentes++;
     });
 
     wrapper.innerHTML = "";
     Object.entries(totais).forEach(([meio, valor]) => {
-      const {total, aprovados, pendentes} = statusPorMeio[meio];
+      const {total, aprovados} = statusPorMeio[meio];
       let extra = "";
-
       if(aprovados === total){
-        extra = `<span style="color:var(--green)">✔ todas aprovadas</span>`;
-      } else if(pendentes > 0){
-        extra = `<span style="color:var(--amber)">⚠ faltam ${pendentes} aprovar</span>`;
+        extra = "(todas aprovadas ✅)";
       } else {
-        extra = `<span style="color:var(--red)">❌ com negados</span>`;
+        extra = `(faltam ${total - aprovados} aprovar)`;
       }
 
       const card = document.createElement("div");
