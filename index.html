@@ -371,6 +371,7 @@ function parseDMY(str) {
   }
 }
 
+let ULTIMOS_DADOS=[];
 
 async function refresh(auto=false){
   if(auto){$("miniSpinner").classList.add("active");}
@@ -383,40 +384,27 @@ async function refresh(auto=false){
     const r=await fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(empresa)}`);
     const data=await r.json();
     const todos = data.titulos || data;
-
-    // calcula menor e maior vencimento dos aprovados
-    const aprovados = todos.filter(t => t.status === "Aprovado");
-    if (aprovados.length) {
-      const datas = aprovados.map(t => iso(t.vencimento)).sort();
-      const min = datas[0];
-      const max = datas[datas.length-1];
-      const fp = document.querySelector("#filtroPeriodo")._flatpickr;
-      if (fp) {
-        const minBR = min.split("-").reverse().join("/");
-        const maxBR = max.split("-").reverse().join("/");
-        fp.setDate([minBR, maxBR], false);
-      }
-    }
+    ULTIMOS_DADOS = todos; // 🔹 guarda todos da empresa para cálculos
 
     const periodo=$("filtroPeriodo").value;
     const [ini,fim] = periodo.includes(" até ") ? periodo.split(" até ") : [periodo,periodo];
 
-  TITULOS = todos.filter(t => {
-  const d = toDate(iso(t.vencimento));
-  const st = t.status || "";
-  const mp = (t.meio_pagamento || "Outros");
-  const iniDate = toDate(ini);
-  const fimDate = toDate(fim);
+    // TITULOS = filtrados pelo status + meio + pesquisa (para a lista)
+    TITULOS = todos.filter(t => {
+      const d = toDate(iso(t.vencimento));
+      const st = t.status || "";
+      const mp = (t.meio_pagamento || "Outros");
+      const iniDate = toDate(ini);
+      const fimDate = toDate(fim);
 
-  return (!status || st === status)
-      && (meio === "Todos" || mp === meio)
-      && (!iniDate || d >= iniDate)
-      && (!fimDate || d <= fimDate);
-});
-
+      return (!status || st === status)
+          && (meio === "Todos" || mp === meio)
+          && (!iniDate || d >= iniDate)
+          && (!fimDate || d <= fimDate);
+    });
 
     renderLista();
-   atualizarResumo(TITULOS);
+    atualizarResumo(); // 🔹 agora sem passar TITULOS
     $("lastUpdate").textContent="Última atualização: "+new Date().toLocaleTimeString("pt-BR");
   }catch(e){console.error(e);}
   finally{
@@ -425,23 +413,34 @@ async function refresh(auto=false){
   }
 }
 
-function atualizarResumo(dados){
-  const counts={Aprovado:0,Pendente:0,Negado:0,Liquidado:0};
- dados.forEach(t => {
-  if(counts[t.status] !== undefined){
-    const valor = Number(String(t.valor).replace("R$","").replace(/\./g,"").replace(",",".")) || 0;
-    counts[t.status] += valor;
-  }
-});
+function atualizarResumo(){
+  const periodo=$("filtroPeriodo").value;
+  const [ini,fim] = periodo.includes(" até ") ? periodo.split(" até ") : [periodo,periodo];
+  const iniDate = toDate(ini);
+  const fimDate = toDate(fim);
 
-  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  // 🔹 considera só empresa + período (ignora status e meio)
+  const dados = ULTIMOS_DADOS.filter(t=>{
+    const d = toDate(iso(t.vencimento));
+    return (!iniDate || d >= iniDate) && (!fimDate || d <= fimDate);
+  });
+
+  const counts={Aprovado:0,Pendente:0,Negado:0,Liquidado:0};
+  dados.forEach(t=>{
+    if(counts[t.status]!==undefined){
+      const valor = Number(String(t.valor).replace("R$","").replace(/\./g,"").replace(",",".")) || 0;
+      counts[t.status]+=valor;
+    }
+  });
+
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
   const resumo=$("statusResumo");
   resumo.innerHTML="";
   Object.entries(counts).forEach(([status,qtd])=>{
     const perc=total?((qtd/total)*100).toFixed(1):0;
     const div=document.createElement("div");
     div.className=status.toLowerCase();
-    div.textContent=`${status}: ${perc}%`;
+    div.textContent=`${status}: ${perc}% (${BRL(qtd)})`;
     resumo.appendChild(div);
   });
 }
