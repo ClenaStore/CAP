@@ -416,7 +416,7 @@ async function refresh(auto=false){
 
 
     renderLista();
-    atualizarResumo(todos);
+   atualizarResumo(TITULOS);
     $("lastUpdate").textContent="Última atualização: "+new Date().toLocaleTimeString("pt-BR");
   }catch(e){console.error(e);}
   finally{
@@ -427,7 +427,13 @@ async function refresh(auto=false){
 
 function atualizarResumo(dados){
   const counts={Aprovado:0,Pendente:0,Negado:0,Liquidado:0};
-  dados.forEach(t=>{if(counts[t.status]!==undefined)counts[t.status]++;});
+ dados.forEach(t => {
+  if(counts[t.status] !== undefined){
+    const valor = Number(String(t.valor).replace("R$","").replace(/\./g,"").replace(",",".")) || 0;
+    counts[t.status] += valor;
+  }
+});
+
   const total=Object.values(counts).reduce((a,b)=>a+b,0);
   const resumo=$("statusResumo");
   resumo.innerHTML="";
