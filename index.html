@@ -235,6 +235,7 @@
 
 <div class="footer">
   <button id="btnMassa" class="btn-massa">✓ Liquidar Selecionados</button>
+  <button id="btnSelectAll" class="btn-massa" style="background:#22314b;">Selecionar Todos</button>
 </div>
 
 <div id="overlay"></div>
@@ -361,6 +362,29 @@ function parseDMY(str) {
   const [d,m,y] = str.split("/");
   return `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
 }
+  function toggleSelecionarTodos(){
+  const btn = $("btnSelectAll");
+  const todosCards = document.querySelectorAll(".titulo input[type=checkbox]");
+  const todosSelecionados = Array.from(todosCards).every(chk => chk.checked);
+
+  SELEC = [];
+  todosCards.forEach(chk => {
+    if(todosSelecionados){
+      chk.checked = false;
+    } else {
+      const card = chk.closest(".titulo");
+      if(card.dataset.status === "Aprovado"){
+        chk.checked = true;
+        SELEC.push(card);
+      }
+    }
+  });
+
+  salvarSelecoes();
+  atualizarBtnMassa();
+}
+$("btnSelectAll").onclick = toggleSelecionarTodos;
+
 
   function toDate(str){
   if (!str) return null;
@@ -484,11 +508,14 @@ function atualizarResumo(){
 
 function atualizarBtnMassa(){
   const btnMassa = $("btnMassa");
+  const btnSelectAll = $("btnSelectAll");
   if(SELEC.length > 0){
     btnMassa.classList.add("show");
   } else {
     btnMassa.classList.remove("show");
   }
+  // Sempre mostra o botão de selecionar todos
+  btnSelectAll.classList.add("show");
 }
 
 $("btnTotais").onclick = () => {
