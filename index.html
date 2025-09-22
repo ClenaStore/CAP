@@ -384,19 +384,31 @@ async function refresh(auto=false){
     const r=await fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(empresa)}`);
     const data=await r.json();
     const todos = data.titulos || data;
-    ULTIMOS_DADOS = todos; // 🔹 guarda todos da empresa para cálculos
+    ULTIMOS_DADOS = todos; // 🔹 guarda todos da empresa
+
+    // 🔹 pega menor e maior vencimento (sempre)
+    if(todos.length){
+      const datas = todos.map(t => iso(t.vencimento)).sort();
+      const min = datas[0];
+      const max = datas[datas.length-1];
+      const fp = document.querySelector("#filtroPeriodo")._flatpickr;
+      if (fp) {
+        const minBR = min.split("-").reverse().join("/");
+        const maxBR = max.split("-").reverse().join("/");
+        fp.setDate([minBR, maxBR], false); // atualiza range
+      }
+    }
 
     const periodo=$("filtroPeriodo").value;
     const [ini,fim] = periodo.includes(" até ") ? periodo.split(" até ") : [periodo,periodo];
+    const iniDate = toDate(ini);
+    const fimDate = toDate(fim);
 
-    // TITULOS = filtrados pelo status + meio + pesquisa (para a lista)
+    // TITULOS = filtrados pelo status + meio + pesquisa
     TITULOS = todos.filter(t => {
       const d = toDate(iso(t.vencimento));
       const st = t.status || "";
       const mp = (t.meio_pagamento || "Outros");
-      const iniDate = toDate(ini);
-      const fimDate = toDate(fim);
-
       return (!status || st === status)
           && (meio === "Todos" || mp === meio)
           && (!iniDate || d >= iniDate)
@@ -404,7 +416,7 @@ async function refresh(auto=false){
     });
 
     renderLista();
-    atualizarResumo(); // 🔹 agora sem passar TITULOS
+    atualizarResumo();
     $("lastUpdate").textContent="Última atualização: "+new Date().toLocaleTimeString("pt-BR");
   }catch(e){console.error(e);}
   finally{
@@ -412,6 +424,7 @@ async function refresh(auto=false){
     else{$("overlay").classList.remove("active");}
   }
 }
+
 
 function atualizarResumo(){
   const periodo=$("filtroPeriodo").value;
