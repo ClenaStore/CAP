@@ -458,10 +458,21 @@ $("btnTotais").onclick = () => {
   const wrapper = $("totaisWrapper");
   wrapper.classList.toggle("active");
   if(wrapper.classList.contains("active")){
+    const periodo = $("filtroPeriodo").value;
+    const [ini,fim] = periodo.includes(" até ") ? periodo.split(" até ") : [periodo,periodo];
+    const iniDate = toDate(ini);
+    const fimDate = toDate(fim);
+
+    // 🔹 considera só empresa + período (ignora pesquisa/status selecionado)
+    const dados = ULTIMOS_DADOS.filter(t=>{
+      const d = toDate(iso(t.vencimento));
+      return (!iniDate || d >= iniDate) && (!fimDate || d <= fimDate);
+    });
+
     const totais = {};
     const statusPorMeio = {};
 
-    TITULOS.forEach(t => {
+    dados.forEach(t => {
       const meio = t.meio_pagamento || "Outros";
       const valor = Number(String(t.valor).replace("R$","").replace(/\./g,"").replace(",",".")) || 0;
 
@@ -469,19 +480,24 @@ $("btnTotais").onclick = () => {
       totais[meio] = (totais[meio] || 0) + valor;
 
       // conta status por modalidade
-      if(!statusPorMeio[meio]) statusPorMeio[meio] = {total:0, aprovados:0};
+      if(!statusPorMeio[meio]) statusPorMeio[meio] = {total:0, aprovados:0, pendentes:0, negados:0};
       statusPorMeio[meio].total++;
       if(t.status === "Aprovado") statusPorMeio[meio].aprovados++;
+      if(t.status === "Pendente") statusPorMeio[meio].pendentes++;
+      if(t.status === "Negado") statusPorMeio[meio].negados++;
     });
 
     wrapper.innerHTML = "";
     Object.entries(totais).forEach(([meio, valor]) => {
-      const {total, aprovados} = statusPorMeio[meio];
+      const {total, aprovados, pendentes, negados} = statusPorMeio[meio];
       let extra = "";
       if(aprovados === total){
         extra = "(todas aprovadas ✅)";
       } else {
-        extra = `(faltam ${total - aprovados} aprovar)`;
+        const faltando = total - aprovados;
+        if(negados > 0) extra = `(⚠ ${negados} negado(s), ${faltando} não aprov.)`;
+        else if(pendentes > 0) extra = `(faltam ${pendentes} pendentes)`;
+        else extra = `(faltam ${faltando} aprovar)`;
       }
 
       const card = document.createElement("div");
