@@ -446,15 +446,30 @@ async function refresh(auto=false){
     ULTIMOS_DADOS = [];
 
     // 🔹 busca títulos de todas as empresas
-    for(const emp of EMPRESAS){
-      try{
-        const r=await fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(emp)}`);
-        const data=await r.json();
-        const titulos = data.titulos || data;
-        titulos.forEach(t => { t.empresa = emp; }); // mantém como está na lista EMPRESAS
-        ULTIMOS_DADOS = ULTIMOS_DADOS.concat(titulos);
-      }catch(e){console.error("Erro ao carregar", emp, e);}
-    }
+ ULTIMOS_DADOS = [];
+
+// 🔹 1. Carrega rápido apenas a empresa selecionada
+try {
+  const r = await fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(empresaSelecionada)}`);
+  const data = await r.json();
+  const titulos = data.titulos || data;
+  titulos.forEach(t => { t.empresa = empresaSelecionada; });
+  ULTIMOS_DADOS = ULTIMOS_DADOS.concat(titulos);
+} catch(e) {
+  console.error("Erro ao carregar principal", empresaSelecionada, e);
+}
+
+// 🔹 2. Em segundo plano, busca as outras empresas
+EMPRESAS.filter(e => e !== empresaSelecionada).forEach(emp => {
+  fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(emp)}`)
+    .then(r => r.json())
+    .then(data => {
+      const titulos = data.titulos || data;
+      titulos.forEach(t => { t.empresa = emp; });
+      ULTIMOS_DADOS = ULTIMOS_DADOS.concat(titulos);
+    })
+    .catch(e => console.error("Erro ao carregar em segundo plano", emp, e));
+});
 
     // 🔹 define range pelo vencimento dos aprovados da empresa selecionada
     const aprovados = ULTIMOS_DADOS.filter(t => t.empresa.toLowerCase() === empresaSelecionada && t.status === "Aprovado");
