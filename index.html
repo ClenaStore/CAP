@@ -387,17 +387,20 @@ async function refresh(auto=false){
     ULTIMOS_DADOS = todos; // 🔹 guarda todos da empresa
 
     // 🔹 pega menor e maior vencimento (sempre)
-    if(todos.length){
-      const datas = todos.map(t => iso(t.vencimento)).sort();
-      const min = datas[0];
-      const max = datas[datas.length-1];
-      const fp = document.querySelector("#filtroPeriodo")._flatpickr;
-      if (fp) {
-        const minBR = min.split("-").reverse().join("/");
-        const maxBR = max.split("-").reverse().join("/");
-        fp.setDate([minBR, maxBR], false); // atualiza range
-      }
-    }
+  // 🔹 pega menor e maior vencimento APENAS dos aprovados
+const aprovados = todos.filter(t => t.status === "Aprovado");
+if(aprovados.length){
+  const datas = aprovados.map(t => iso(t.vencimento)).sort();
+  const min = datas[0];
+  const max = datas[datas.length-1];
+  const fp = document.querySelector("#filtroPeriodo")._flatpickr;
+  if (fp) {
+    const minBR = min.split("-").reverse().join("/");
+    const maxBR = max.split("-").reverse().join("/");
+    fp.setDate([minBR, maxBR], false); // atualiza range com aprovados
+  }
+}
+
 const fp = document.querySelector("#filtroPeriodo")._flatpickr;
 let ini, fim;
 if (fp && fp.selectedDates.length) {
