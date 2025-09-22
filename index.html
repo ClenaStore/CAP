@@ -455,7 +455,7 @@ async function refresh(auto=false){
         const r=await fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(emp)}`);
         const data=await r.json();
         const titulos = data.titulos || data;
-        titulos.forEach(t => { t.empresa = emp.toUpperCase(); }); // garante campo empresa
+        titulos.forEach(t => { t.empresa = emp; }); // mantém como está na lista EMPRESAS
         ULTIMOS_DADOS = ULTIMOS_DADOS.concat(titulos);
       }catch(e){console.error("Erro ao carregar", emp, e);}
     }
@@ -707,7 +707,9 @@ $("btnConfirmarMassa").onclick = async () => {
 
   for(const chk of checks){
     const empresa = chk.value;
-    const titulos = ULTIMOS_DADOS.filter(t => t.empresa === empresa && t.status === "Aprovado");
+    const titulos = ULTIMOS_DADOS.filter(
+  t => t.empresa.toLowerCase() === empresa.toLowerCase() && t.status === "Aprovado"
+);
 
     for(const t of titulos){
       try{
