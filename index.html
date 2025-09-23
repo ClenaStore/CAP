@@ -387,19 +387,24 @@ async function refresh(auto=false){
     const r=await fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(empresa)}`);
     const data=await r.json();
     const todos = data.titulos || data;
-    ULTIMOS_DADOS = todos; // 🔹 guarda todos da empresa
-// 🔹 em segundo plano carrega as demais empresas
+// 🔹 Atualiza cache da empresa selecionada
+ULTIMOS_DADOS = ULTIMOS_DADOS.filter(t => t.empresa !== empresa);
+todos.forEach(t => t.empresa = empresa);
+ULTIMOS_DADOS = ULTIMOS_DADOS.concat(todos);
+
+// 🔹 Em segundo plano, atualiza cache das demais empresas
 EMPRESAS.filter(e => e !== empresa).forEach(emp => {
   fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(emp)}`)
     .then(r => r.json())
     .then(data => {
       const ts = data.titulos || data;
-      // adiciona a propriedade empresa
       ts.forEach(t => t.empresa = emp);
-      ULTIMOS_DADOS = ULTIMOS_DADOS.concat(ts);
+      // substitui dados antigos daquela empresa
+      ULTIMOS_DADOS = ULTIMOS_DADOS.filter(x => x.empresa !== emp).concat(ts);
     })
     .catch(e => console.error("Erro ao carregar em segundo plano", emp, e));
 });
+
 
     // 🔹 pega menor e maior vencimento (sempre)
   // 🔹 pega menor e maior vencimento APENAS dos aprovados
