@@ -561,8 +561,15 @@ if(t.status === "Aprovado") {
   statusPorMeio[meio].aprovados++;
   statusPorMeio[meio].valorAprovado += valor;
 }
-if(t.status === "Pendente") statusPorMeio[meio].pendentes++;
-if(t.status === "Negado") statusPorMeio[meio].negados++;
+if(t.status === "Pendente") {
+  statusPorMeio[meio].pendentes++;
+  statusPorMeio[meio].valorPendente = (statusPorMeio[meio].valorPendente || 0) + valor;
+}
+if(t.status === "Negado") {
+  statusPorMeio[meio].negados++;
+  statusPorMeio[meio].valorNegado = (statusPorMeio[meio].valorNegado || 0) + valor;
+}
+
 
     });
 
@@ -574,9 +581,9 @@ Object.entries(totais).forEach(([meio, valor]) => {
   if (aprovados === total && total > 0) {
     extra += " ✅";
   } else {
-    let partes = [];
-    if (pendentes > 0) partes.push(`${pendentes} pendente(s)`);
-    if (negados > 0) partes.push(`${negados} negado(s)`);
+let partes = [];
+if (pendentes > 0) partes.push(`${pendentes} pendente(s) — ${BRL(statusPorMeio[meio].valorPendente || 0)}`);
+if (negados > 0) partes.push(`${negados} negado(s) — ${BRL(statusPorMeio[meio].valorNegado || 0)}`);
     if (partes.length) extra += " (" + partes.join(", ") + ")";
   }
 
