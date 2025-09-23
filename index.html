@@ -553,10 +553,10 @@ $("btnTotais").onclick = () => {
     });
 
     wrapper.innerHTML = "";
- Object.entries(totais).forEach(([meio, valor]) => {
-  const {total, aprovados, pendentes, negados} = statusPorMeio[meio];
-  let extra = `${aprovados} de ${total} aprovados`;
+Object.entries(totais).forEach(([meio, valor]) => {
+  const {total, aprovados, pendentes, negados, valorAprovado} = statusPorMeio[meio];
   
+  let extra = `${aprovados} de ${total} aprovados`;
   if (aprovados === total && total > 0) {
     extra += " ✅";
   } else {
@@ -570,9 +570,15 @@ $("btnTotais").onclick = () => {
 
   const card = document.createElement("div");
   card.className = "total-card";
-  card.innerHTML = `<span>${meio}</span><span>${BRL(valor)} • ${extra}</span>`;
+  card.innerHTML = `
+    <span>${meio}</span>
+    <span>
+      Total: ${BRL(valor)} • Aprovado: ${BRL(valorAprovado)}<br>
+      ${extra}
+    </span>`;
   wrapper.appendChild(card);
 });
+
 
 
     const totalGeral = Object.values(totais).reduce((a,b)=>a+b,0);
