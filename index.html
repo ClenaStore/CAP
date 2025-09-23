@@ -577,8 +577,6 @@ Object.entries(totais).forEach(([meio, valor]) => {
     let partes = [];
     if (pendentes > 0) partes.push(`${pendentes} pendente(s)`);
     if (negados > 0) partes.push(`${negados} negado(s)`);
-    const faltam = total - aprovados - pendentes - negados;
-    if (faltam > 0) partes.push(`${faltam} sem status`);
     if (partes.length) extra += " (" + partes.join(", ") + ")";
   }
 
