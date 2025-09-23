@@ -553,25 +553,27 @@ $("btnTotais").onclick = () => {
     });
 
     wrapper.innerHTML = "";
-    Object.entries(totais).forEach(([meio, valor]) => {
-      const {total, aprovados, pendentes, negados} = statusPorMeio[meio];
-      let extra = "";
-      if(aprovados === total){
-        extra = "(todas aprovadas ✅)";
-      } else {
-        let partes = [];
-        if (pendentes > 0) partes.push(`${pendentes} pendente(s)`);
-        if (negados > 0) partes.push(`${negados} negado(s)`);
-        const faltam = total - aprovados - pendentes - negados;
-        if (faltam > 0) partes.push(`${faltam} não aprov.`);
-        extra = `(${partes.join(", ")})`;
-      }
+ Object.entries(totais).forEach(([meio, valor]) => {
+  const {total, aprovados, pendentes, negados} = statusPorMeio[meio];
+  let extra = `${aprovados} de ${total} aprovados`;
+  
+  if (aprovados === total && total > 0) {
+    extra += " ✅";
+  } else {
+    let partes = [];
+    if (pendentes > 0) partes.push(`${pendentes} pendente(s)`);
+    if (negados > 0) partes.push(`${negados} negado(s)`);
+    const faltam = total - aprovados - pendentes - negados;
+    if (faltam > 0) partes.push(`${faltam} sem status`);
+    if (partes.length) extra += " (" + partes.join(", ") + ")";
+  }
 
-      const card = document.createElement("div");
-      card.className = "total-card";
-      card.innerHTML = `<span>${meio}</span><span>${BRL(valor)} ${extra}</span>`;
-      wrapper.appendChild(card);
-    });
+  const card = document.createElement("div");
+  card.className = "total-card";
+  card.innerHTML = `<span>${meio}</span><span>${BRL(valor)} • ${extra}</span>`;
+  wrapper.appendChild(card);
+});
+
 
     const totalGeral = Object.values(totais).reduce((a,b)=>a+b,0);
     const cardTotal = document.createElement("div");
