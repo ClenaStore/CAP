@@ -401,20 +401,19 @@ EMPRESAS.filter(e => e !== empresa).forEach(emp => {
     .catch(e => console.error("Erro ao carregar em segundo plano", emp, e));
 });
 
-    // 🔹 pega menor e maior vencimento (sempre)
-  // 🔹 pega menor e maior vencimento APENAS dos aprovados
+// 🔹 pega menor e maior vencimento APENAS dos aprovados
 const aprovados = todos.filter(t => t.status === "Aprovado");
-if(aprovados.length){
-  const datas = aprovados.map(t => iso(t.vencimento)).sort();
-  const min = datas[0];
-  const max = datas[datas.length-1];
+if (aprovados.length) {
+  // Ordena as datas de vencimento convertidas para Date
+  const datas = aprovados.map(t => toDate(iso(t.vencimento))).sort((a,b)=>a-b);
+  const minDate = datas[0];
+  const maxDate = datas[datas.length-1];
   const fp = document.querySelector("#filtroPeriodo")._flatpickr;
   if (fp) {
-    const minBR = min.split("-").reverse().join("/");
-    const maxBR = max.split("-").reverse().join("/");
-    fp.setDate([minBR, maxBR], false); // atualiza range com aprovados
+    fp.setDate([minDate, maxDate], true); // true = atualiza input
   }
 }
+
 
 const fp = document.querySelector("#filtroPeriodo")._flatpickr;
 let ini, fim;
