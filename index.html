@@ -545,11 +545,25 @@ $("btnTotais").onclick = () => {
       totais[meio] = (totais[meio] || 0) + valor;
 
       // inicializa contadores por modalidade
-      if(!statusPorMeio[meio]) statusPorMeio[meio] = {total:0, aprovados:0, pendentes:0, negados:0};
-      statusPorMeio[meio].total++;
-      if(t.status === "Aprovado") statusPorMeio[meio].aprovados++;
-      if(t.status === "Pendente") statusPorMeio[meio].pendentes++;
-      if(t.status === "Negado") statusPorMeio[meio].negados++;
+if(!statusPorMeio[meio]) {
+  statusPorMeio[meio] = {
+    total:0,
+    aprovados:0,
+    pendentes:0,
+    negados:0,
+    valorAprovado:0
+  };
+}
+
+statusPorMeio[meio].total++;
+
+if(t.status === "Aprovado") {
+  statusPorMeio[meio].aprovados++;
+  statusPorMeio[meio].valorAprovado += valor;
+}
+if(t.status === "Pendente") statusPorMeio[meio].pendentes++;
+if(t.status === "Negado") statusPorMeio[meio].negados++;
+
     });
 
     wrapper.innerHTML = "";
@@ -580,13 +594,19 @@ Object.entries(totais).forEach(([meio, valor]) => {
 });
 
 
+const totalGeral = Object.values(totais).reduce((a,b)=>a+b,0);
+const totalAprovadoGeral = Object.values(statusPorMeio)
+  .reduce((a,b)=>a+b.valorAprovado,0);
 
-    const totalGeral = Object.values(totais).reduce((a,b)=>a+b,0);
-    const cardTotal = document.createElement("div");
-    cardTotal.className = "total-card";
-    cardTotal.style.background = "linear-gradient(90deg,var(--blue),var(--green))";
-    cardTotal.innerHTML = `<span>Total</span><span>${BRL(totalGeral)}</span>`;
-    wrapper.appendChild(cardTotal);
+const cardTotal = document.createElement("div");
+cardTotal.className = "total-card";
+cardTotal.style.background = "linear-gradient(90deg,var(--blue),var(--green))";
+cardTotal.innerHTML = `
+  <span>Total Geral</span>
+  <span>
+    Total: ${BRL(totalGeral)} • Aprovado: ${BRL(totalAprovadoGeral)}
+  </span>`;
+wrapper.appendChild(cardTotal);
   }
 };
 
