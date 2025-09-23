@@ -517,80 +517,96 @@ function atualizarBtnMassa(){
 }
 
 
-function atualizarTotais(){
+$("btnTotais").onclick = () => {
   const wrapper = $("totaisWrapper");
-  if(!wrapper.classList.contains("active")) return;
+  wrapper.classList.toggle("active");
+  if(wrapper.classList.contains("active")){
+    const fp = document.querySelector("#filtroPeriodo")._flatpickr;
+    let ini, fim;
+    if (fp && fp.selectedDates.length) {
+      ini = iso(fp.selectedDates[0]);
+      fim = iso(fp.selectedDates[1] || fp.selectedDates[0]);
+    }
 
-  const fp = document.querySelector("#filtroPeriodo")._flatpickr;
-  let ini, fim;
-  if (fp && fp.selectedDates.length) {
-    ini = iso(fp.selectedDates[0]);
-    fim = iso(fp.selectedDates[1] || fp.selectedDates[0]);
+    // 🔹 considera só empresa + período
+    const dados = ULTIMOS_DADOS.filter(t=>{
+      const d = iso(t.vencimento);
+      return (!ini || d >= ini) && (!fim || d <= fim);
+    });
+
+    const totais = {};
+    const statusPorMeio = {};
+
+    dados.forEach(t => {
+      const meio = t.meio_pagamento || "Outros";
+      const valor = Number(String(t.valor).replace("R$","").replace(/\./g,"").replace(",",".")) || 0;
+
+      // soma valores
+      totais[meio] = (totais[meio] || 0) + valor;
+
+      // inicializa contadores por modalidade
+if(!statusPorMeio[meio]) {
+  statusPorMeio[meio] = {
+    total:0,
+    aprovados:0,
+    pendentes:0,
+    negados:0,
+    valorAprovado:0
+  };
+}
+
+statusPorMeio[meio].total++;
+
+if(t.status === "Aprovado") {
+  statusPorMeio[meio].aprovados++;
+  statusPorMeio[meio].valorAprovado += valor;
+}
+if(t.status === "Pendente") statusPorMeio[meio].pendentes++;
+if(t.status === "Negado") statusPorMeio[meio].negados++;
+
+    });
+
+    wrapper.innerHTML = "";
+Object.entries(totais).forEach(([meio, valor]) => {
+  const {total, aprovados, pendentes, negados, valorAprovado} = statusPorMeio[meio];
+  
+  let extra = `${aprovados} de ${total} aprovados`;
+  if (aprovados === total && total > 0) {
+    extra += " ✅";
+  } else {
+    let partes = [];
+    if (pendentes > 0) partes.push(`${pendentes} pendente(s)`);
+    if (negados > 0) partes.push(`${negados} negado(s)`);
+    if (partes.length) extra += " (" + partes.join(", ") + ")";
   }
 
-  const dados = ULTIMOS_DADOS.filter(t=>{
-    const d = iso(t.vencimento);
-    return (!ini || d >= ini) && (!fim || d <= fim);
-  });
-
-  const totais = {};
-  const statusPorMeio = {};
-
-  dados.forEach(t => {
-    const meio = t.meio_pagamento || "Outros";
-    const valor = Number(String(t.valor).replace("R$","").replace(/\./g,"").replace(",",".")) || 0;
-
-    totais[meio] = (totais[meio] || 0) + valor;
-
-    if(!statusPorMeio[meio]) {
-      statusPorMeio[meio] = { total:0, aprovados:0, pendentes:0, negados:0, valorAprovado:0 };
-    }
-    statusPorMeio[meio].total++;
-    if(t.status === "Aprovado") {
-      statusPorMeio[meio].aprovados++;
-      statusPorMeio[meio].valorAprovado += valor;
-    }
-    if(t.status === "Pendente") statusPorMeio[meio].pendentes++;
-    if(t.status === "Negado") statusPorMeio[meio].negados++;
-  });
-
-  wrapper.innerHTML = "";
-  Object.entries(totais).forEach(([meio, valor]) => {
-    const {total, aprovados, pendentes, negados, valorAprovado} = statusPorMeio[meio];
-    let extra = `${aprovados} de ${total} aprovados`;
-    if (aprovados === total && total > 0) {
-      extra += " ✅";
-    } else {
-      let partes = [];
-      if (pendentes > 0) partes.push(`${pendentes} pendente(s)`);
-      if (negados > 0) partes.push(`${negados} negado(s)`);
-      if (partes.length) extra += " (" + partes.join(", ") + ")";
-    }
-
-    const card = document.createElement("div");
-    card.className = "total-card";
-    card.innerHTML = `
-      <span>${meio}</span>
-      <span>
-        Total: ${BRL(valor)} • Aprovado: ${BRL(valorAprovado)}<br>
-        ${extra}
-      </span>`;
-    wrapper.appendChild(card);
-  });
-
-  const totalGeral = Object.values(totais).reduce((a,b)=>a+b,0);
-  const totalAprovadoGeral = Object.values(statusPorMeio).reduce((a,b)=>a+b.valorAprovado,0);
-
-  const cardTotal = document.createElement("div");
-  cardTotal.className = "total-card";
-  cardTotal.style.background = "linear-gradient(90deg,var(--blue),var(--green))";
-  cardTotal.innerHTML = `
-    <span>Total Geral</span>
+  const card = document.createElement("div");
+  card.className = "total-card";
+  card.innerHTML = `
+    <span>${meio}</span>
     <span>
-      Total: ${BRL(totalGeral)} • Aprovado: ${BRL(totalAprovadoGeral)}
+      Total: ${BRL(valor)} • Aprovado: ${BRL(valorAprovado)}<br>
+      ${extra}
     </span>`;
-  wrapper.appendChild(cardTotal);
-}
+  wrapper.appendChild(card);
+});
+
+
+const totalGeral = Object.values(totais).reduce((a,b)=>a+b,0);
+const totalAprovadoGeral = Object.values(statusPorMeio)
+  .reduce((a,b)=>a+b.valorAprovado,0);
+
+const cardTotal = document.createElement("div");
+cardTotal.className = "total-card";
+cardTotal.style.background = "linear-gradient(90deg,var(--blue),var(--green))";
+cardTotal.innerHTML = `
+  <span>Total Geral</span>
+  <span>
+    Total: ${BRL(totalGeral)} • Aprovado: ${BRL(totalAprovadoGeral)}
+  </span>`;
+wrapper.appendChild(cardTotal);
+  }
+};
 
 
 (function boot(){
@@ -603,13 +619,25 @@ function atualizarTotais(){
     onClose:()=>refresh(false)
   });
   $("barraPesquisa").addEventListener("input", ()=>renderLista());
-["filtroStatus","filtroMeio","filtroEmpresa"].forEach(id=>{
+  ["filtroStatus","filtroMeio","filtroEmpresa"].forEach(id=>{
   $(id).onchange=()=>{
     refresh(false);
-    atualizarTotais();
+    // fecha os totais ao mudar filtros
+    $("totaisWrapper").classList.remove("active");
   };
 });
 
+const fp = document.querySelector("#filtroPeriodo")._flatpickr;
+flatpickr("#filtroPeriodo",{
+  mode:"range",
+  dateFormat:"d/m/Y",
+  locale:"pt",
+  defaultDate:[hoje,hoje],
+  onClose:()=>{
+    refresh(false);
+    $("totaisWrapper").classList.remove("active"); // fecha ao mudar data
+  }
+});
   refresh(false);
   setInterval(()=>refresh(true),10*1000);
 })();
