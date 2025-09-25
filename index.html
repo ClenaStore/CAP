@@ -2,652 +2,647 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<title>CAP APROVADO</title>
+<title>Aprovação de CAP</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
 <style>
-  :root{
-    --bg:#0b1220;--card:#0f172a;--ink:#e5f0ff;--muted:#a8b3c7;--line:#243043;
-    --green:#16a34a;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,system-ui;background:var(--bg);color:var(--ink);font-size:15px}
+:root{
+  --bg:#0b1220;--card:#0f172a;--ink:#e5f0ff;--muted:#a8b3c7;--line:#243043;
+  --teal:#06b6d4;--blue:#4f46e5;--green:#16a34a;--red:#ef4444;--amber:#f59e0b;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui;background:var(--bg);color:var(--ink);font-size:15px}
 
-  header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#0f172a,#0b1220);
-    border-bottom:1px solid var(--line);padding:14px}
-  header h1{font-size:18px;margin:0 0 12px 0;font-weight:800}
+header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#0f172a,#0b1220);
+  border-bottom:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:10px}
+header h1{font-size:18px;margin:0;font-weight:800}
 
-.row-filtros{
+.controls{width:100%;display:flex;flex-direction:column;gap:8px}
+.row-filtros{display:flex;gap:8px;width:100%}
+.row-filtros select{flex:1}
+.row-linha{display:flex;gap:8px;width:100%}
+.row-linha input{flex:1}
+
+select,input{background:#0b1528;border:1px solid #22314b;color:var(--ink);
+  padding:10px 14px;border-radius:10px;font-size:15px;width:100%}
+.btn{border:1px solid #2a3955;background:#0b1528;color:var(--ink);padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;font-size:15px;width:100%;position:relative;overflow:hidden}
+.btn.icon{display:flex;align-items:center;gap:6px;justify-content:center}
+
+#overlay{position:fixed;inset:0;background:rgba(3,7,18,.55);display:none;align-items:center;justify-content:center;z-index:100}
+.spinner{width:56px;height:56px;border:6px solid var(--teal);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.spinner-btn{width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;position:absolute;top:50%;left:50%;margin:-8px 0 0 -8px;display:none}
+.loading .spinner-btn{display:block}
+.loading span,.loading b,.loading i{visibility:hidden}
+
+.container{padding:16px;max-width:1250px;margin:0 auto}
+
+.status-cards {
   display: grid;
-  grid-template-columns: 120px 1fr 120px 180px 160px; /* 🔹 larguras fixas + flexível */
-  gap: 8px;
-  margin-bottom: 8px;
+  grid-template-columns: 1fr; /* 🔹 sempre 1 por linha */
+  gap: 10px;
+  margin: 12px 0;
 }
 
-.row-filtros select,
-.row-filtros input {
-  background:#0b1528;
-  border:1px solid #22314b;
-  color:var(--ink);
-  padding:8px 10px;   /* 🔽 menor altura */
-  border-radius:8px;
-  font-size:14px;     /* 🔽 menor fonte */
-  width:100%;
-}
-
-  @media (max-width: 900px) {
-    .row-filtros { grid-template-columns: 1fr 1fr; }
-  }
-  @media (max-width: 600px) {
-    .row-filtros { grid-template-columns: 1fr; }
-  }
-
-    padding:10px 14px;border-radius:10px;font-size:15px;width:100%}
-
-.statusResumoWrapper {
+.status-card {
+  border-radius: 12px;
+  padding: 10px;
+  font-weight: 700;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-  padding-left: 4px;
-  flex-wrap: wrap; /* permite quebrar se faltar espaço */
+  color: #fff;
+  font-size: 14px;
 }
-  .statusResumo{display:flex;gap:16px;flex-wrap:wrap}
-  .statusResumo div{font-size:14px;font-weight:600}
-  .statusResumo .aprovado{color:var(--green)}
-  .statusResumo .pendente{color:var(--amber)}
-  .statusResumo .negado{color:var(--red)}
-  .statusResumo .liquidado{color:var(--blue)}
-#miniSpinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--ink);
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  display: none; /* só aparece quando ativo */
-}
-
-#miniSpinner.active {
-  display: inline-block;
-}
-#lastUpdate {
+.status-card span {
   font-size: 13px;
-  color: var(--muted);
+}
+.status-card b {
+  font-size: 14px;
+}
+
+.status-card.aprovado {
+  background: linear-gradient(180deg,#19c37d,#16a34a);
+}
+.status-card.negado {
+  background: linear-gradient(180deg,#fb6969,#ef4444);
+}
+.status-card.pendente {
+  background: linear-gradient(180deg,#60a5fa,#1d4ed8);
+}
+
+.mods-card{margin:16px 0;background:#0f172a;border:1px solid var(--line);border-radius:18px;padding:16px}
+.mods {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 🔹 Agora 2 cards por linha por padrão */
+  gap: 12px;
+}
+
+@media(min-width:768px){
+  .mods { grid-template-columns: 1fr 1fr; } /* mantém 2 no tablet */
+}
+
+@media(min-width:1024px){
+  .mods { grid-template-columns: 1fr 1fr 1fr; } /* 3 no desktop */
+}
+
+.mod{border-radius:16px;padding:14px;font-weight:700;display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:16px}
+.mod.total{background:#0f172a;border:1px solid var(--line)}
+.mod.pix {
+  background: linear-gradient(180deg, #3b82f6, #1e40af);   /* Azul */
+}
+
+.mod.cartao {
+  background: linear-gradient(180deg, #22c55e, #15803d);   /* Verde */
+}
+
+.mod.boleto {
+  background: linear-gradient(180deg, #9ca3af, #374151);   /* Cinza */
+}
+
+
+.list-head{display:flex;align-items:center;justify-content:space-between;margin-top:10px;font-size:16px}
+.lista{display:grid;gap:14px;margin-top:14px}
+.titulo{background:linear-gradient(180deg,#101a2f,#0f172a);border:1px solid var(--line);
+  border-radius:18px;padding:12px;display:grid;grid-template-columns:1fr;gap:10px;position:relative}
+.ck input{width:22px;height:22px}
+.row{display:flex;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.row b{color:var(--ink);font-size:15px}
+.row.hist{color:#f59e0b;font-weight:600;font-size:13px}
+
+.pill{padding:6px 12px;border-radius:999px;border:1px solid #2a3955;background:#0b1528;font-size:13px;font-weight:800;
+  position:absolute;top:8px;right:8px}
+.pill.ok{border-color:#155e32;color:#b6f3c5;background:#0e2a1b}
+.pill.warn{border-color:#7a1e1e;color:#ffb4b4;background:#2a0e0e}
+
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.mini{flex:1 1 calc(50% - 6px);padding:8px;border-radius:12px;border:1px solid #22314b;background:#0b1528;color:#fff;font-weight:700;cursor:pointer;font-size:14px;text-align:center;position:relative;overflow:hidden}
+.mini.aprovar{background:linear-gradient(180deg,#19c37d,#16a34a)}
+.mini.negar{background:linear-gradient(180deg,#fb6969,#ef4444)}
+.mini.obs{background:linear-gradient(180deg,#60a5fa,#1d4ed8)}
+.mini.loading{opacity:.75;pointer-events:none}
+
+.list-head label input {
+  width: 18px;
+  height: 18px;
+}
+
+/* radios no menu */
+.menu label {
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-#barraPesquisa {
-  background:#0b1528;
-  border:1px solid #22314b;
-  color:var(--ink);
-  padding:8px 10px;
-  border-radius:8px;
-  font-size:14px;
-  width:100%;
+  gap: 8px;         /* espaço entre quadrado e texto */
+  cursor: pointer;
+  color: var(--ink);
 }
 
-  .container{padding:16px;max-width:100%;margin:0 auto}
-  .lista{display:flex;flex-direction:column;gap:16px;width:100%}
-
-.titulo {
-  width:95%;
-  margin:0 auto;
-  background:#101a2f;
-  border:1px solid var(--line);
-  border-radius:8px;
-  padding:8px 12px;      /* 🔽 menor */
-  display:flex;
-  flex-direction:column;
-  gap:2px;               /* 🔽 menor */
-  position:relative;
+.menu label input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px !important;     /* largura fixa */
+  height: 18px !important;    /* altura igual -> quadrado */
+  border: 2px solid var(--blue);
+  border-radius: 3px;         /* levemente arredondado */
+  background: #0b1528;
+  cursor: pointer;
+  flex: 0 0 18px;             /* impede de esticar no flex */
 }
-  .topo{display:flex;align-items:center;justify-content:space-between}
-  .ck{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
-  .ck input{width:18px;height:18px}
-  .row{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted);word-break:break-word}
-  .row b{color:var(--ink);font-size:14px}
 
-  .pill{padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
-  .pill.aprovado{background:#0e2a1b;color:#b6f3c5;border:1px solid #155e32}
-  .pill.negado{background:#2a0e0e;color:#ffb4b4;border:1px solid #7a1e1e}
-  .pill.pendente{background:#2a2a0e;color:#fff2b2;border:1px solid #b59d00}
-  .pill.liquidado{background:#0b2a3d;color:#b2d8ff;border:1px solid #2563eb}
+.menu label input[type="radio"]:checked {
+  background: var(--blue);    /* quadrado todo preenchido */
+}
 
-  .acoes{display:flex;justify-content:flex-end;margin-top:6px}
-  .btn{padding:6px 12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:0;position:relative}
-  .liquidar{background:linear-gradient(180deg,#19c37d,#16a34a);color:#fff}
 
-  .footer{position:fixed;left:0;right:0;bottom:0;padding:12px;background:#0f172a;border-top:1px solid var(--line);
-    display:flex;justify-content:flex-end}
-  .btn-massa {
-    background: linear-gradient(180deg,#19c37d,#16a34a);
-    color: #fff;
-    border: 0;
-    border-radius: 6px;
-    padding: 8px 14px;
-    font-weight: 700;
-    cursor: pointer;
-    font-size: 13px;
-    position: relative;
-    display: none;
-  }
-  .btn-massa.show { display: inline-block; }
 
-  .btn.loading {color: transparent !important;pointer-events: none;}
-  .btn.loading::after {
-    content: "";position: absolute;top: 50%;left: 50%;
-    width: 16px;height: 16px;margin: -8px 0 0 -8px;
-    border: 2px solid #fff;border-top-color: transparent;
-    border-radius: 50%;animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
 
-  #overlay {
-    position: fixed;top:0;left:0;right:0;bottom:0;
-    background: rgba(11,18,32,0.9);
-    display:flex;justify-content:center;align-items:center;
-    z-index:1000;visibility:hidden;opacity:0;
-    transition:opacity 0.3s ease;
-  }
-  #overlay.active {visibility:visible;opacity:1;}
-  #overlay::after {
-    content:"";width:40px;height:40px;
-    border:4px solid #fff;border-top-color:transparent;
-    border-radius:50%;animation:spin 1s linear infinite;
-  }
 
-  #totaisWrapper {
-    margin: 12px 0;
-    display: none;
-  }
-  #totaisWrapper.active {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .total-card {
-    flex: 1 1 45%;
-    background: #101a2f;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 10px 14px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: 700;
-    font-size: 14px;
-    color: var(--ink);
-  }
+.menu label input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 10px;
+  height: 10px;
+  background: var(--blue); /* quadradinho interno */
+  border-radius: 2px;      /* opcional: arredondar canto do "check" */
+}
+
+
+.footer {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  z-index: 15;
+}
+.bubble {
+  background: var(--blue);
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-weight: 700;
+  font-size: 13px;
+  text-align: right;
+  display: none;
+  width: auto;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+}
+.btn-massa {
+  background: linear-gradient(180deg, var(--teal), #0796ad);
+  color: #002027;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  display: none;
+  width: auto;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+}
+.btn-massa.loading {
+  opacity: .8;
+  pointer-events: none;
+}
+
+.menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #0f172a;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+  display: none;
+  z-index: 30;
+}
+
+.modal{position:fixed;inset:0;background:rgba(2,6,15,.65);display:none;align-items:center;justify-content:center;z-index:200}
+.modal .box{background:#0f172a;border:1px solid var(--line);border-radius:16px;max-width:95%;width:500px;padding:16px}
+.modal h3{margin:0 0 12px;font-size:18px}
+.modal .close{float:right;border:1px solid var(--line);background:#0b1528;border-radius:8px;color:#fff;padding:6px 12px;cursor:pointer;font-size:14px}
+textarea{width:100%;min-height:90px;border-radius:8px;border:1px solid #22314b;background:#0b1528;color:#fff;padding:10px;font-size:14px}
 </style>
 </head>
 <body>
 <header>
-  <h1>CAP APROVADO</h1>
-<div class="row-filtros">
-  <select id="filtroStatus">
-    <option value="Aprovado" selected>Aprovados</option>
-    <option value="Negado">Negados</option>
-    <option value="Pendente">Pendentes</option>
-    <option value="Liquidado">Liquidados</option>
-  </select>
-  
-  <!-- 🔍 Barra de pesquisa logo depois do status -->
-  <input type="text" id="barraPesquisa" placeholder="🔍 Pesquisar..." />
-  
-  <select id="filtroMeio">
-    <option value="Todos" selected>Todos</option>
-    <option value="PIX">PIX</option>
-    <option value="Cartão">Cartão</option>
-    <option value="Boleto">Boleto</option>
-    <option value="Outros">Outros</option>
-  </select>
-
-  <input type="text" id="filtroPeriodo" placeholder="Selecione período" />
-  <select id="filtroEmpresa">
-    <option value="cap delicia">DELÍCIA GOURMET</option>
-    <option value="cap villa">VILLA GOURMET</option>
-    <option value="cap padaria">PADARIA DELÍCIA</option>
-    <option value="cap mercatto">MERCATTO</option>
-    <option value="cap m.kids">M.KIDS</option>
-  </select>
-</div>
-  <div style="margin-top:8px;">
-    <button id="btnTotais" class="btn" style="background:#22314b;color:#fff;width:100%;border-radius:8px;padding:10px;">
-      📊 Ver Totais
-    </button>
+  <h1>CAP - Grupo DV</h1>
+  <div class="controls">
+    <div class="row-filtros">
+      <select id="filtroStatus">
+        <option value="Pendente" selected>Pendentes</option>
+        <option value="Aprovado">Aprovados</option>
+        <option value="Negado">Negados</option>
+        <option value="Todos">Todos</option>
+      </select>
+      <select id="filtroMeio">
+        <option value="Todos" selected>Todos</option>
+        <option value="Pix">Pix</option>
+        <option value="Cartão">Cartão</option>
+        <option value="Boleto">Boleto</option>
+        <option value="Outros">Outros</option>
+      </select>
+    </div>
+    <div class="row-linha">
+      <input type="text" id="filtroPeriodo" placeholder="Selecione período" />
+      <div style="position:relative;flex:1">
+        <button class="btn icon" id="btnEmpresas"><span id="empresaSelecionada">CAP DELICIA</span> ▼</button>
+        <div id="menuEmpresas" class="menu"></div>
+      </div>
+    </div>
   </div>
-  <div id="totaisWrapper"></div>
-<div class="statusResumoWrapper">
-  <div id="lastUpdate"></div>
-  <div id="statusResumo" class="statusResumo"></div>
-</div>
-
-
 </header>
 
+<div id="overlay"><div class="spinner"></div></div>
+
 <div class="container">
+  <div id="statusCards" class="status-cards"></div>
+  <div class="mods-card">
+    <div style="font-weight:800;margin-bottom:8px;font-size:16px">Modalidades</div>
+    <div id="mods" class="mods"></div>
+  </div>
+
+ <div class="list-head">
+  <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+    <input id="master" type="checkbox" />
+    <b>Selecionar todos</b>
+  </label>
+  <div id="contagem" style="color:var(--muted);font-size:14px">0 itens</div>
+</div>
+
   <div id="lista" class="lista"></div>
 </div>
 
 <div class="footer">
-  <button id="btnSelectAll" class="btn-massa" style="background:#22314b;">Selecionar Todos</button>
-  <button id="btnMassa" class="btn-massa">✓ Liquidar Selecionados</button>
+  <div id="bubble" class="bubble" style="display:none">Total selecionado: R$ 0,00</div>
+  <button id="btnMassa" class="btn-massa" style="display:none"><span>Aprovar selecionados</span><div class="spinner-btn"></div></button>
 </div>
 
-
-<div id="overlay"></div>
+<!-- modal observação -->
+<div id="modalObs" class="modal">
+  <div class="box">
+    <button class="close" onclick="fecharObs()">Fechar</button>
+    <h3>Observação</h3>
+    <textarea id="textoObs" placeholder="Digite a observação..."></textarea>
+    <button class="btn" style="margin-top:10px" onclick="salvarObs()"><span>Salvar</span><div class="spinner-btn"></div></button>
+  </div>
+</div>
 
 <script>
-const endpoint="https://script.google.com/macros/s/AKfycbzJS4UkF6WZ-duyMJW_h3e5fo4Hev6Hq1a7rGhWNYCNJ6V_ou0lkN6wS49eeANf4Yuy/exec";
-  const EMPRESAS = ["cap delicia","cap villa","cap padaria","cap mercatto","cap m.kids"];
+const endpointTitulos="https://script.google.com/macros/s/AKfycbzJS4UkF6WZ-duyMJW_h3e5fo4Hev6Hq1a7rGhWNYCNJ6V_ou0lkN6wS49eeANf4Yuy/exec";
+const EMP_DEFAULT=["CAP DELICIA","CAP VILLA","CAP PADARIA","CAP MERCATTO","CAP M.KIDS"];
+let TITULOS={},SELEC=[],obsContext={};
+
+// 🔹 NOVO: variáveis globais para armazenar o período
+let periodoInicio = null;
+let periodoFim = null;
+
+
 const $=id=>document.getElementById(id);
 const BRL=n=>(isNaN(n)?0:n).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
-const iso = d => {const dt=new Date(d);dt.setMinutes(dt.getMinutes()-dt.getTimezoneOffset());return dt.toISOString().slice(0,10);};
+const iso = d => { const dt=new Date(d); dt.setMinutes(dt.getMinutes()-dt.getTimezoneOffset()); return dt.toISOString().slice(0,10); };
+const ID=(emp,linha)=>`${emp.replace(/\s+/g,'_')}__${linha}`;
 
-let TITULOS=[],SELEC=[];
+function setLoading(btn,on=true){if(on)btn.classList.add("loading");else btn.classList.remove("loading");}
 
-function salvarSelecoes(){const ids=SELEC.map(c=>c.dataset.linha+"|"+c.dataset.emp);localStorage.setItem("titulosSelecionados",JSON.stringify(ids));}
-function restaurarSelecoes(){const ids=JSON.parse(localStorage.getItem("titulosSelecionados")||"[]");ids.forEach(id=>{const [linha,emp]=id.split("|");const card=document.querySelector(`.titulo[data-linha="${linha}"][data-emp="${emp}"]`);if(card){const chk=card.querySelector("input[type=checkbox]");chk.checked=true;if(!SELEC.includes(card))SELEC.push(card);}});}
+function normalizeMeio(meio){
+  meio = (meio||"Outros").toLowerCase();
+  if(meio.includes("pix")) return "Pix";
+  if(meio.includes("cart")) return "Cartão";
+  if(meio.includes("bol")) return "Boleto";
+  return "Outros";
+}
+
+function addHistLocal(id,texto){
+  let hist=JSON.parse(localStorage.getItem("hist_"+id)||"[]");
+  hist.push({data:new Date().toLocaleString("pt-BR"),texto});
+  localStorage.setItem("hist_"+id,JSON.stringify(hist));
+}
+function getHistLocal(id){return JSON.parse(localStorage.getItem("hist_"+id)||"[]");}
+
+// 🔹 Soma usa __all (sempre considerando o período, ignorando Negados)
+function renderMods(){
+  const mods=$("mods");mods.innerHTML="";
+  const statusCards=$("statusCards");statusCards.innerHTML="";
+
+  let soma={Pix:0,Cartão:0,Boleto:0,Outros:0,Total:0};
+  let somaStatus={Aprovado:0,Negado:0,Pendente:0};
+
+  for(const emp of Object.keys(TITULOS)){
+    (TITULOS[emp].__all||[]).forEach(t=>{
+      const status=(t.status||"Pendente");
+      const valor=Number(String(t.valor).replace("R$","").replace(/\./g,"").replace(",","."))||0;
+      const meio=normalizeMeio(t.meio_pagamento);
+
+      // Soma por modalidade
+      soma.Total+=valor;
+      soma[meio]+=valor;
+
+      // Soma por status
+      if(somaStatus[status]!==undefined){
+        somaStatus[status]+=valor;
+      }
+    });
+  }
+
+  // 🔹 Render status cards
+  const cardStatus=(cls,label,val)=>`<div class="status-card ${cls}"><span>${label}</span><b>${BRL(val)}</b></div>`;
+  statusCards.innerHTML+=cardStatus("aprovado","Aprovado",somaStatus.Aprovado);
+  statusCards.innerHTML+=cardStatus("negado","Negado",somaStatus.Negado);
+  statusCards.innerHTML+=cardStatus("pendente","Pendente",somaStatus.Pendente);
+
+  // 🔹 Render modalidade cards
+  const card=(cls,label,val)=>`<div class="mod ${cls}"><span>${label}</span><b>${BRL(val)}</b></div>`;
+  mods.innerHTML+=card("pix","Pix",soma.Pix);
+  mods.innerHTML+=card("cartao","Cartão",soma["Cartão"]);
+  mods.innerHTML+=card("boleto","Boleto",soma.Boleto);
+  mods.innerHTML+=card("total","Total",soma.Total);
+}
+
 
 function renderLista(){
-  const lista=$("lista");lista.innerHTML="";SELEC=[];
-  const abaSelecionada=$("filtroEmpresa").value;
-  const termo = $("barraPesquisa").value.toLowerCase(); // 🔍 pega o texto
+  const lista=$("lista");lista.innerHTML="";SELEC=[];$("master").checked=false;
+  let totalItens=0;
+  for(const emp of Object.keys(TITULOS)){
+    (TITULOS[emp].__filtered||[]).forEach((t)=>{
+      totalItens++;
+      const valor=Number(String(t.valor).replace("R$","").replace(/\./g,"").replace(",","."))||0;
+      const id=ID(emp,t.linha);
+      const st=(t.status || "Pendente");
+      const obs=(t.observacao || "");
+      const histColuna=(t.historico || "");
+      const histLocal=getHistLocal(id);
 
-  TITULOS
-    .filter(t => {
-      return !termo || 
-             (t.fornecedor && t.fornecedor.toLowerCase().includes(termo)) ||
-             (t.empresa && t.empresa.toLowerCase().includes(termo)) ||
-             (t.meio_pagamento && t.meio_pagamento.toLowerCase().includes(termo)) ||
-             (t.status && t.status.toLowerCase().includes(termo));
-    })
-    .forEach(t=>{
       const card=document.createElement("div");
-    card.className="titulo";
-    card.dataset.linha=t.linha;
-    card.dataset.emp=abaSelecionada;
-    card.dataset.status=t.status;
-    const valor=Number(String(t.valor).replace("R$","").replace(/\./g,"").replace(",","."))||0;
-    card.dataset.valor=valor;
-    let st=t.status||"";let pillClass=st.toLowerCase();
-    const historico=(t.historico||"").toString().trim().replace(/\n/g,"<br>");
-    const obs=(t.observacao??"").toString().trim().replace(/\n/g,"<br>");
-    card.innerHTML=`
-      <div class="topo">
-        <label class="ck"><input type="checkbox" onchange="toggleSel(this)"> Selecionar</label>
-        <span class="pill ${pillClass}">${st}</span>
-      </div>
-      <div><b>${t.fornecedor||"-"}</b> • ${t.empresa||"-"}</div>
-      <div class="row">Venc: <b>${iso(t.vencimento).split("-").reverse().join("/")}</b> • Meio: <b>${t.meio_pagamento||"Outros"}</b></div>
-      <div class="row">Valor: <b>${BRL(valor)}</b></div>
-      <div class="row">Histórico: <b>${historico||"-"}</b></div>
-      <div class="row">Obs de Leonardo: <b>${obs||"-"}</b></div>
-      <div class="acoes">
-        <button class="btn liquidar" onclick="liquidar(this)" ${st!=="Aprovado"?"disabled style='opacity:0.5;cursor:not-allowed'":""}>✓ Liquidar</button>
-      </div>`;
-    lista.appendChild(card);
-  });
-  restaurarSelecoes();
-  atualizarBtnMassa();
+      card.className="titulo";card.dataset.id=id;card.dataset.emp=emp;card.dataset.linha=t.linha;card.dataset.valor=valor;
+      card.innerHTML=`
+        <div class="ck"><input type="checkbox" onchange="toggleSel(this)" /></div>
+        <div class="info">
+          <div class="row"><b>${t.fornecedor}</b> • ${emp}</div>
+          <div class="row">Venc: <b>${iso(t.vencimento).split("-").reverse().join("/")}</b> • Meio: <b>${t.meio_pagamento||"Outros"}</b></div>
+          <div class="row">Valor: <b>${BRL(valor)}</b></div>
+          ${obs ? `<div class="row obs" style="color:#60a5fa">Obs (planilha): ${obs}</div>` : ""}
+          ${histLocal.length ? `<div class="row obs" style="color:#a8b3c7">Obs (local): ${histLocal.map(h=>h.texto).join("<br>")}</div>` : ""}
+          ${histColuna ? `<div class="row hist">Histórico F360: ${histColuna}</div>` : ""}
+        </div>
+        <span class="pill" data-status>${st}</span>
+        <div class="actions">
+          <button class="mini obs" onclick="abrirObs('${id}','${emp}',${t.linha},\`${obs}\`,'${t.fornecedor}')"><span>✏️ Obs</span><div class="spinner-btn"></div></button>
+          <button class="mini negar" onclick="acaoStatus(this,'Negado')"><span>✗ Negar</span><div class="spinner-btn"></div></button>
+          <button class="mini aprovar" onclick="acaoStatus(this,'Aprovado')"><span>✓ Aprovar</span><div class="spinner-btn"></div></button>
+        </div>`;
+
+      card.addEventListener("dblclick", ()=>{
+        const chk = card.querySelector(".ck input");
+        chk.checked = !chk.checked;
+        toggleSel(chk);
+      });
+
+      setPill(card.querySelector("[data-status]"),st);
+      lista.appendChild(card);
+    });
+  }
+  $("contagem").textContent=`${totalItens} ${totalItens===1?"item":"itens"}`;
+  renderMods();
+}
+
+function setPill(el,status){
+  el.className="pill";
+  if(status==="Aprovado"){el.classList.add("ok");el.textContent="Aprovado"}
+  else if(status==="Negado"){el.classList.add("warn");el.textContent="Negado"}
+  else el.textContent=status;
 }
 
 function toggleSel(chk){
   const card=chk.closest(".titulo");
-  if(chk.checked){
-    if(card.dataset.status==="Aprovado"){
-      SELEC.push(card);
-    }else{
-      chk.checked=false;
-      alert("Somente títulos aprovados podem ser liquidados.");
-    }
-  }else{
-    SELEC=SELEC.filter(c=>c!==card);
-  }
-  salvarSelecoes();
-  atualizarBtnMassa();
+  const id=card.dataset.id,emp=card.dataset.emp,linha=Number(card.dataset.linha),valor=Number(card.dataset.valor)||0;
+  if(chk.checked)SELEC.push({id,emp,linha,valor}); else SELEC=SELEC.filter(x=>x.id!==id);
+  const total=SELEC.reduce((s,x)=>s+x.valor,0);
+  if(SELEC.length){$("bubble").style.display="block";$("btnMassa").style.display="block";$("bubble").textContent="Total selecionado: "+BRL(total)}
+  else{$("bubble").style.display="none";$("btnMassa").style.display="none"}
 }
 
-async function liquidar(btn){
+// 🔹 Seleção em massa
+$("master").addEventListener("change",function(){
+  const chks=document.querySelectorAll(".titulo .ck input");
+  chks.forEach(chk=>{
+    chk.checked=this.checked;
+    toggleSel(chk);
+  });
+});
+
+async function acaoStatus(btn,novo){
   const card=btn.closest(".titulo");
-  if(card.dataset.status!=="Aprovado"){
-    alert("Somente títulos aprovados podem ser liquidados.");return;
-  }
-  const emp=card.dataset.emp,linha=card.dataset.linha;
-  try{
-    btn.classList.add("loading");
-    const r=await fetch(`${endpoint}?action=atualizar&empresa=${encodeURIComponent(emp)}&linha=${linha}&status=Liquidado`);
-    const txt=await r.text();
-    if(txt.includes("sucesso")||txt.includes("success")){
-      card.querySelector(".pill").textContent="Liquidado";
-      card.querySelector(".pill").className="pill liquidado";
-      card.dataset.status="Liquidado";
-      btn.disabled=true;btn.style.opacity="0.5";
-    }else{alert("Erro ao liquidar título. Resposta: "+txt);}
-    salvarSelecoes();
-  }catch(e){console.error(e);}
-  finally{btn.classList.remove("loading");}
+  const emp=card.dataset.emp,linha=card.dataset.linha,id=card.dataset.id;
+  setLoading(btn,true);
+  setPill(card.querySelector("[data-status]"),novo);
+  addHistLocal(id,"Status alterado para "+novo);
+  try{await fetch(`${endpointTitulos}?action=atualizar&empresa=${encodeURIComponent(emp)}&linha=${linha}&status=${encodeURIComponent(novo)}`);}catch(e){console.error(e)}
+  setLoading(btn,false);
 }
 
-async function liquidarMassa(){
-  const btnMassa=$("btnMassa");
-  btnMassa.classList.add("loading");
-  for(const card of SELEC){
-    if(card.dataset.status!=="Aprovado")continue;
-    const emp=card.dataset.emp,linha=card.dataset.linha;
-    const btn=card.querySelector(".btn.liquidar");
+async function atualizarStatusMassa(novo="Aprovado"){
+  const btn=$("btnMassa");
+  setLoading(btn,true);
+  for(const s of SELEC){
+    const card=document.querySelector(`.titulo[data-id="${s.id}"]`);
+    if(!card) continue;
+    setPill(card.querySelector("[data-status]"),novo);
+    addHistLocal(s.id,"Status alterado para "+novo);
     try{
-      if(btn) btn.classList.add("loading");
-      const r=await fetch(`${endpoint}?action=atualizar&empresa=${encodeURIComponent(emp)}&linha=${linha}&status=Liquidado`);
-      const txt=await r.text();
-      if(txt.includes("sucesso")||txt.includes("success")){
-        card.querySelector(".pill").textContent="Liquidado";
-        card.querySelector(".pill").className="pill liquidado";
-        card.dataset.status="Liquidado";
-        if(btn){btn.disabled=true;btn.style.opacity="0.5";}
-      }
-    }catch(e){console.error(e);}
-    finally{if(btn) btn.classList.remove("loading");}
+      await fetch(`${endpointTitulos}?action=atualizar&empresa=${encodeURIComponent(s.emp)}&linha=${s.linha}&status=${encodeURIComponent(novo)}`);
+    }catch(e){console.error(e)}
+    card.querySelector(".ck input").checked=false;
   }
-  SELEC=[];salvarSelecoes();btnMassa.classList.remove("loading");
-  atualizarBtnMassa();
+  SELEC=[];$("master").checked=false;
+  $("bubble").style.display="none";$("btnMassa").style.display="none";
+  setLoading(btn,false);
 }
-$("btnMassa").onclick=liquidarMassa;
+$("btnMassa").onclick=()=>atualizarStatusMassa("Aprovado");
 
-function parseDMY(str) {
-  if (!str) return "";
-  const [d,m,y] = str.split("/");
-  return `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
-}
-
-  function toDate(str){
-  if (!str) return null;
-  if (str.includes("-")) { // formato ISO (yyyy-mm-dd)
-    return new Date(str+"T00:00:00");
-  } else { // formato dd/mm/yyyy
-    const [d,m,y] = str.split("/");
-    return new Date(`${y}-${m}-${d}T00:00:00`);
-  }
+function abrirObs(id,emp,linha,txt,fornecedor){
+  obsContext={id,emp,linha};
+  $("textoObs").value=txt||"";
+  $("modalObs").style.display="flex";
+  $("modalObs").querySelector("h3").textContent = "Observação - " + fornecedor;
 }
 
-let ULTIMOS_DADOS=[];
-
-async function refresh(auto=false){
-  if(auto){$("miniSpinner").classList.add("active");}
-  else{$("overlay").classList.add("active");}
-  const status=$("filtroStatus").value;
-  const meio=$("filtroMeio").value;
-  const empresa=$("filtroEmpresa").value;
-
+function fecharObs(){$("modalObs").style.display="none"}
+async function salvarObs(){
+  const {id,emp,linha}=obsContext;
+  const texto=$("textoObs").value.trim();
+  if(!texto)return;
+  const btn=$("modalObs").querySelector(".btn");
+  setLoading(btn,true);
+  addHistLocal(id,"Obs pendente: "+texto);
+  renderLista();
   try{
-    const r=await fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(empresa)}`);
-    const data=await r.json();
-    const todos = data.titulos || data;
-    ULTIMOS_DADOS = todos; // 🔹 guarda todos da empresa
-// 🔹 em segundo plano carrega as demais empresas
-EMPRESAS.filter(e => e !== empresa).forEach(emp => {
-  fetch(`${endpoint}?action=listar&empresa=${encodeURIComponent(emp)}`)
-    .then(r => r.json())
-    .then(data => {
-      const ts = data.titulos || data;
-      // adiciona a propriedade empresa
-      ts.forEach(t => t.empresa = emp);
-      ULTIMOS_DADOS = ULTIMOS_DADOS.concat(ts);
-    })
-    .catch(e => console.error("Erro ao carregar em segundo plano", emp, e));
-});
-
-    // 🔹 pega menor e maior vencimento (sempre)
-  // 🔹 pega menor e maior vencimento APENAS dos aprovados
-const aprovados = todos.filter(t => t.status === "Aprovado");
-if(aprovados.length){
-  const datas = aprovados.map(t => iso(t.vencimento)).sort();
-  const min = datas[0];
-  const max = datas[datas.length-1];
-  const fp = document.querySelector("#filtroPeriodo")._flatpickr;
-  if (fp) {
-    const minBR = min.split("-").reverse().join("/");
-    const maxBR = max.split("-").reverse().join("/");
-    fp.setDate([minBR, maxBR], false); // atualiza range com aprovados
-  }
-}
-
-const fp = document.querySelector("#filtroPeriodo")._flatpickr;
-let ini, fim;
-if (fp && fp.selectedDates.length) {
-  ini = iso(fp.selectedDates[0]);
-  fim = iso(fp.selectedDates[1] || fp.selectedDates[0]);
-} else {
-  ini = fim = iso(new Date());
-}
-
-    const iniDate = toDate(ini);
-    const fimDate = toDate(fim);
-
-    // TITULOS = filtrados pelo status + meio + pesquisa
-    TITULOS = todos.filter(t => {
-      const d = toDate(iso(t.vencimento));
-      const st = t.status || "";
-      const mp = (t.meio_pagamento || "Outros");
-      return (!status || st === status)
-          && (meio === "Todos" || mp === meio)
-          && (!iniDate || d >= iniDate)
-          && (!fimDate || d <= fimDate);
-    });
-
-    renderLista();
-    atualizarResumo();
-    $("lastUpdate").textContent="Última atualização: "+new Date().toLocaleTimeString("pt-BR");
-  }catch(e){console.error(e);}
-  finally{
-    if(auto){$("miniSpinner").classList.remove("active");}
-    else{$("overlay").classList.remove("active");}
-  }
-}
-
-
-function atualizarResumo(){
-  const periodo=$("filtroPeriodo").value;
-  const [ini,fim] = periodo.includes(" até ") ? periodo.split(" até ") : [periodo,periodo];
-  const iniDate = toDate(ini);
-  const fimDate = toDate(fim);
-
-  // 🔹 considera só empresa + período (ignora status e meio)
-  const dados = ULTIMOS_DADOS.filter(t=>{
-    const d = toDate(iso(t.vencimento));
-    return (!iniDate || d >= iniDate) && (!fimDate || d <= fimDate);
-  });
-
-  const counts={Aprovado:0,Pendente:0,Negado:0,Liquidado:0};
-  dados.forEach(t=>{
-    if(counts[t.status]!==undefined){
-      const valor = Number(String(t.valor).replace("R$","").replace(/\./g,"").replace(",",".")) || 0;
-      counts[t.status]+=valor;
-    }
-  });
-
-  const total = Object.values(counts).reduce((a,b)=>a+b,0);
-  const resumo=$("statusResumo");
-  resumo.innerHTML="";
-  Object.entries(counts).forEach(([status,qtd])=>{
-    const perc=total?((qtd/total)*100).toFixed(1):0;
-    const div=document.createElement("div");
-    div.className=status.toLowerCase();
-    div.textContent=`${status}: ${perc}% (${BRL(qtd)})`;
-    resumo.appendChild(div);
-  });
-}
-function toggleSelecionarTodos(){
-  const btn = $("btnSelectAll");
-  const todosCards = document.querySelectorAll(".titulo input[type=checkbox]");
-  const todosSelecionados = Array.from(todosCards).every(chk => chk.checked);
-
-  SELEC = [];
-  todosCards.forEach(chk => {
-    if(todosSelecionados){
-      chk.checked = false;
-    } else {
-      const card = chk.closest(".titulo");
-      if(card.dataset.status === "Aprovado"){
-        chk.checked = true;
-        SELEC.push(card);
+    const resp = await fetch(`${endpointTitulos}?action=atualizarObservacao&empresa=${encodeURIComponent(emp)}&linha=${linha}&texto=${encodeURIComponent(texto)}`);
+    if(resp.ok){
+      localStorage.removeItem("hist_"+id);
+      const card=document.querySelector(`.titulo[data-id="${id}"]`);
+      if(card){
+        const info=card.querySelector(".info");
+        info.querySelectorAll(".row.obs").forEach(e=>e.remove());
+        const div=document.createElement("div");
+        div.className="row obs";div.style.color="#60a5fa";
+        div.textContent="Obs (planilha): "+texto;
+        info.appendChild(div);
       }
     }
-  });
-
-  salvarSelecoes();
-  atualizarBtnMassa();
+  }catch(e){console.error(e)}
+  setLoading(btn,false);
+  fecharObs();
 }
-$("btnSelectAll").onclick = toggleSelecionarTodos;
 
-function atualizarBtnMassa(){
-  const btnMassa = $("btnMassa");
-  const btnSelectAll = $("btnSelectAll");
-  if(SELEC.length > 0){
-    btnMassa.classList.add("show");
-  } else {
-    btnMassa.classList.remove("show");
+// 🔹 Salva no storage local
+function salvarCache(emp, data){
+  localStorage.setItem("cache_"+emp, JSON.stringify({
+    ts: Date.now(),
+    data
+  }));
+}
+
+// 🔹 Lê do storage local
+function lerCache(emp){
+  const raw = localStorage.getItem("cache_"+emp);
+  if(!raw) return null;
+  try {
+    const obj = JSON.parse(raw);
+    // Só usa se tiver menos de 60 segundos
+    if(Date.now() - obj.ts < 60000) return obj.data;
+    return null;
+  }catch(e){ return null; }
+}
+
+// 🔹 Busca direto da planilha e atualiza cache
+async function fetchEmpresa(emp){
+  try{
+    const r = await fetch(`${endpointTitulos}?action=listar&empresa=${encodeURIComponent(emp)}`);
+    const d = await r.json();
+    const data = d.titulos || d;
+    salvarCache(emp,data);
+    return data;
+  }catch(e){
+    console.error("Erro ao buscar", emp, e);
+    return lerCache(emp) || [];
   }
-  // botão de selecionar todos sempre aparece
-  btnSelectAll.classList.add("show");
 }
 
+async function loadTitulos(empresas,inicio,fim,filtroStatus,filtroMeio){
+  TITULOS={};
 
-$("btnTotais").onclick = () => {
-  const wrapper = $("totaisWrapper");
-  wrapper.classList.toggle("active");
-  if(wrapper.classList.contains("active")){
-    const fp = document.querySelector("#filtroPeriodo")._flatpickr;
-    let ini, fim;
-    if (fp && fp.selectedDates.length) {
-      ini = iso(fp.selectedDates[0]);
-      fim = iso(fp.selectedDates[1] || fp.selectedDates[0]);
+  for(const emp of empresas){
+    // Primeiro tenta o cache
+    let data = lerCache(emp) || [];
+    processarEmpresa(emp,data,inicio,fim,filtroStatus,filtroMeio);
+    renderLista(); // mostra logo o que tiver no cache
+
+    // Depois busca novo
+    try {
+      const dataNova = await fetchEmpresa(emp);
+      processarEmpresa(emp,dataNova,inicio,fim,filtroStatus,filtroMeio);
+      renderLista(); // atualiza a empresa com os dados novos
+    } catch(e){
+      console.error("Erro ao buscar",emp,e);
     }
-
-    // 🔹 considera só empresa + período
-    const dados = ULTIMOS_DADOS.filter(t=>{
-      const d = iso(t.vencimento);
-      return (!ini || d >= ini) && (!fim || d <= fim);
-    });
-
-    const totais = {};
-    const statusPorMeio = {};
-
-    dados.forEach(t => {
-      const meio = t.meio_pagamento || "Outros";
-      const valor = Number(String(t.valor).replace("R$","").replace(/\./g,"").replace(",",".")) || 0;
-
-      // soma valores
-      totais[meio] = (totais[meio] || 0) + valor;
-
-      // inicializa contadores por modalidade
-if(!statusPorMeio[meio]) {
-  statusPorMeio[meio] = {
-    total:0,
-    aprovados:0,
-    pendentes:0,
-    negados:0,
-    valorAprovado:0
-  };
-}
-
-statusPorMeio[meio].total++;
-
-if(t.status === "Aprovado") {
-  statusPorMeio[meio].aprovados++;
-  statusPorMeio[meio].valorAprovado += valor;
-}
-if(t.status === "Pendente") {
-  statusPorMeio[meio].pendentes++;
-  statusPorMeio[meio].valorPendente = (statusPorMeio[meio].valorPendente || 0) + valor;
-}
-if(t.status === "Negado") {
-  statusPorMeio[meio].negados++;
-  statusPorMeio[meio].valorNegado = (statusPorMeio[meio].valorNegado || 0) + valor;
-}
-
-
-    });
-
-    wrapper.innerHTML = "";
-Object.entries(totais).forEach(([meio, valor]) => {
-  const {total, aprovados, pendentes, negados, valorAprovado} = statusPorMeio[meio];
-  
-  let extra = `${aprovados} de ${total} aprovados`;
-  if (aprovados === total && total > 0) {
-    extra += " ✅";
-  } else {
-let partes = [];
-if (pendentes > 0) partes.push(`${pendentes} pendente(s) — ${BRL(statusPorMeio[meio].valorPendente || 0)}`);
-if (negados > 0) partes.push(`${negados} negado(s) — ${BRL(statusPorMeio[meio].valorNegado || 0)}`);
-    if (partes.length) extra += " (" + partes.join(", ") + ")";
   }
 
-  const card = document.createElement("div");
-  card.className = "total-card";
-  card.innerHTML = `
-    <span>${meio}</span>
-    <span>
-      Total: ${BRL(valor)} • Aprovado: ${BRL(valorAprovado)}<br>
-      ${extra}
-    </span>`;
-  wrapper.appendChild(card);
-});
+  $("overlay").style.display="none";
+}
 
 
-const totalGeral = Object.values(totais).reduce((a,b)=>a+b,0);
-const totalAprovadoGeral = Object.values(statusPorMeio)
-  .reduce((a,b)=>a+b.valorAprovado,0);
 
-const cardTotal = document.createElement("div");
-cardTotal.className = "total-card";
-cardTotal.style.background = "linear-gradient(90deg,var(--blue),var(--green))";
-cardTotal.innerHTML = `
-  <span>Total Geral</span>
-  <span>
-    Total: ${BRL(totalGeral)} • Aprovado: ${BRL(totalAprovadoGeral)}
-  </span>`;
-wrapper.appendChild(cardTotal);
-  }
-};
+// 🔹 Aplica filtros e salva no objeto global
+function processarEmpresa(emp,data,inicio,fim,filtroStatus,filtroMeio){
+  const all=data.filter(t=>{
+    const d=iso(t.vencimento);
+    return (!inicio||d>=inicio)&&(!fim||d<=fim);
+  });
+  const filtered=all.filter(t=>{
+    let st=(t.status||"Pendente");
+    const meio=normalizeMeio(t.meio_pagamento);
+    const statusOk=filtroStatus==="Todos"?true:(st===filtroStatus);
+    const meioOk=filtroMeio==="Todos"?true:(meio===filtroMeio);
+    return statusOk&&meioOk;
+  });
+  TITULOS[emp]={__all:all,__filtered:filtered};
+}
+
+// 🔹 Agora refresh só carrega a empresa selecionada e atualiza as outras em background
+async function refresh(){
+  const filtro=$("filtroStatus").value;
+  const filtroMeio=$("filtroMeio").value;
+  const empresa=document.querySelector("#menuEmpresas input:checked").value;
+
+  const ini = periodoInicio || iso(new Date());
+  const fim = periodoFim   || iso(new Date());
+
+  await loadTitulos([empresa],ini,fim,filtro,filtroMeio);
+  $("empresaSelecionada").textContent=empresa;
+  renderLista();
+
+  // Em segundo plano atualiza cache das demais
+  EMP_DEFAULT.filter(e=>e!==empresa).forEach(e=>fetchEmpresa(e));
+}
 
 
 (function boot(){
-  const hoje=iso(new Date());
-  flatpickr("#filtroPeriodo",{
-    mode:"range",
-    dateFormat:"d/m/Y",
-    locale:"pt",
-    defaultDate:[hoje,hoje],
-    onClose:()=>refresh(false)
+  const hoje = new Date(); // objeto Date do dia atual
+  flatpickr("#filtroPeriodo", {
+    mode: "range",
+    dateFormat: "d/m/Y", // formato brasileiro
+    locale: "pt",
+    defaultDate: [hoje, hoje], // agora pega o dia atual certo
+ onClose: sel=>{
+  if(sel.length===2){
+    periodoInicio = iso(sel[0]); 
+    periodoFim = iso(sel[1]);
+    $("overlay").style.display="flex";   // ✅ mostra overlay só aqui
+    refresh();
+  }
+}
+
+
   });
-  $("barraPesquisa").addEventListener("input", ()=>renderLista());
-  ["filtroStatus","filtroMeio","filtroEmpresa"].forEach(id=>{
-  $(id).onchange=()=>{
-    refresh(false);
-    // fecha os totais ao mudar filtros
-    $("totaisWrapper").classList.remove("active");
-  };
+
+  const M=$("menuEmpresas");
+EMP_DEFAULT.forEach((emp,i)=>{
+  const lbl=document.createElement("label");
+  lbl.style.display = "flex";
+  lbl.style.alignItems = "center";
+  lbl.style.gap = "8px"; // espaço entre bolinha e texto
+  lbl.innerHTML = `<input type="radio" name="empresaSel" value="${emp}" ${i===0?"checked":""}><span>${emp}</span>`;
+lbl.querySelector("input").onchange = ()=>{
+  $("overlay").style.display="flex";    // ✅ mostra overlay só aqui
+  refresh();
+  M.style.display="none";
+};
+
+  M.appendChild(lbl);
 });
 
-const fp = document.querySelector("#filtroPeriodo")._flatpickr;
-flatpickr("#filtroPeriodo",{
-  mode:"range",
-  dateFormat:"d/m/Y",
-  locale:"pt",
-  defaultDate:[hoje,hoje],
-  onClose:()=>{
-    refresh(false);
-    $("totaisWrapper").classList.remove("active"); // fecha ao mudar data
-  }
-});
-  refresh(false);
-  setInterval(()=>refresh(true),10*1000);
+
+  $("btnEmpresas").onclick=(e)=>{e.stopPropagation();M.style.display=M.style.display==="block"?"none":"block";};
+  document.addEventListener("click",(e)=>{if(!M.contains(e.target)&&e.target.id!=="btnEmpresas"){M.style.display="none";}});
+ $("filtroStatus").onchange=()=>refresh();
+$("filtroMeio").onchange=()=>refresh();
+refresh();
 })();
+// 🔄 Atualização automática a cada 5 segundos
+setInterval(() => {
+  refresh();
+}, 5000);
+
 </script>
 </body>
 </html>
