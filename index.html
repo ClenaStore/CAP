@@ -512,15 +512,12 @@ function salvarCache(emp, data){
   }));
 }
 
-// 🔹 Lê do storage local
 function lerCache(emp){
   const raw = localStorage.getItem("cache_"+emp);
   if(!raw) return null;
   try {
     const obj = JSON.parse(raw);
-    // Só usa se tiver menos de 60 segundos
-    if(Date.now() - obj.ts < 60000) return obj.data;
-    return null;
+    return obj.data;   // sempre usa o cache até fechar/abrir
   }catch(e){ return null; }
 }
 
@@ -560,6 +557,44 @@ async function loadTitulos(empresas,inicio,fim,filtroStatus,filtroMeio){
   $("overlay").style.display="none";
 }
 
+async function bootCache(){
+  $("overlay").style.display = "flex";
+  const empresaAtual = document.querySelector("#menuEmpresas input:checked").value;
+
+  // 🔹 Carrega e renderiza a empresa atual
+  const dataAtual = await fetchEmpresa(empresaAtual);
+  salvarCache(empresaAtual, dataAtual);
+  processarEmpresa(
+    empresaAtual,
+    dataAtual,
+    periodoInicio,
+    periodoFim,
+    $("filtroStatus").value,
+    $("filtroMeio").value
+  );
+  $("empresaSelecionada").textContent = empresaAtual;
+  renderLista();
+
+  // 🔹 Em segundo plano, carrega as demais empresas
+  for (const emp of EMP_DEFAULT.filter(e => e !== empresaAtual)) {
+    try {
+      const data = await fetchEmpresa(emp);
+      salvarCache(emp, data);
+      processarEmpresa(
+        emp,
+        data,
+        periodoInicio,
+        periodoFim,
+        $("filtroStatus").value,
+        $("filtroMeio").value
+      );
+    } catch (e) {
+      console.error("Erro ao carregar", emp, e);
+    }
+  }
+
+  $("overlay").style.display = "none";
+}
 
 
 // 🔹 Aplica filtros e salva no objeto global
@@ -587,12 +622,18 @@ async function refresh(){
   const ini = periodoInicio || iso(new Date());
   const fim = periodoFim   || iso(new Date());
 
-  await loadTitulos([empresa],ini,fim,filtro,filtroMeio);
+  // aplica filtros sempre no cache
+  const data = lerCache(empresa) || [];
+  processarEmpresa(empresa, data, ini, fim, filtro, filtroMeio);
   $("empresaSelecionada").textContent=empresa;
   renderLista();
 
-  // Em segundo plano atualiza cache das demais
-  EMP_DEFAULT.filter(e=>e!==empresa).forEach(e=>fetchEmpresa(e));
+  // atualiza cache da empresa atual em segundo plano
+  fetchEmpresa(empresa).then(d=>{
+    salvarCache(empresa,d);
+    processarEmpresa(empresa,d,ini,fim,filtro,filtroMeio);
+    renderLista();
+  });
 }
 
 
@@ -608,7 +649,7 @@ async function refresh(){
     periodoInicio = iso(sel[0]); 
     periodoFim = iso(sel[1]);
     $("overlay").style.display="flex";   // ✅ mostra overlay só aqui
-    refresh();
+    bootCache();
   }
 }
 
@@ -624,7 +665,7 @@ EMP_DEFAULT.forEach((emp,i)=>{
   lbl.innerHTML = `<input type="radio" name="empresaSel" value="${emp}" ${i===0?"checked":""}><span>${emp}</span>`;
 lbl.querySelector("input").onchange = ()=>{
   $("overlay").style.display="flex";    // ✅ mostra overlay só aqui
-  refresh();
+  bootCache();
   M.style.display="none";
 };
 
@@ -636,7 +677,7 @@ lbl.querySelector("input").onchange = ()=>{
   document.addEventListener("click",(e)=>{if(!M.contains(e.target)&&e.target.id!=="btnEmpresas"){M.style.display="none";}});
  $("filtroStatus").onchange=()=>refresh();
 $("filtroMeio").onchange=()=>refresh();
-refresh();
+bootCache();
 })();
 // 🔄 Atualização automática a cada 5 segundos
 setInterval(() => {
